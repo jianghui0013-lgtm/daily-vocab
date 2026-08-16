@@ -42,6 +42,7 @@ DEFAULT_CFG = {
     "max_candidates": 8,      # 一次最多问 AI 几个候选词
     "notify": True,           # 抓到词后弹 macOS 通知
     # --- 新闻 ---
+    "lan_token": "",          # 手机访问用的固定口令，首次开 --lan 时自动生成
     "news_hour": 6,           # 每天几点抓（本地时间，24 小时制）
     "news_count": 10,         # 每天抓几条
 }
@@ -1838,6 +1839,11 @@ SERVE_HTML = r"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Vocab</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vocab">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f7f6f3" media="(prefers-color-scheme:light)">
+<meta name="theme-color" content="#16171a" media="(prefers-color-scheme:dark)">
 <style>
 :root{
   --bg:#f7f6f3; --card:#fff; --fg:#1a1a1a; --dim:#8a8a86; --line:#e6e4df;
@@ -1892,9 +1898,10 @@ button.g1 small,button.g2 small,button.g3 small{color:var(--dim)}
   margin-bottom:8px;box-shadow:var(--shadow);position:relative;
   display:flex;gap:22px;align-items:flex-start}
 .cl{flex:0 0 33%;min-width:0}
-.cr{flex:1;min-width:0;padding-left:22px;border-left:1px solid var(--line);align-self:stretch}
+.cr{flex:1;min-width:0;padding-left:22px;border-left:1px solid var(--line);
+  align-self:stretch;position:relative}
 .row .w{font-size:18px;font-weight:600;display:flex;align-items:baseline;gap:0}
-.del{position:absolute;right:9px;top:7px;border:none;background:var(--card);
+.del{position:absolute;right:-6px;top:-6px;border:none;background:var(--card);
   color:var(--dim);font-size:17px;line-height:1;cursor:pointer;padding:3px 7px;
   font-family:inherit;border-radius:7px;opacity:0;transition:opacity .12s ease;
   -webkit-tap-highlight-color:transparent}
@@ -1902,7 +1909,8 @@ button.g1 small,button.g2 small,button.g3 small{color:var(--dim)}
 .del:hover{opacity:1;color:var(--bad)}
 .del.arm{opacity:1;color:var(--bad);font-size:12px;font-weight:600;
   border:1px solid var(--bad);padding:3px 8px}
-@media (hover:none){ .del{opacity:.5} }
+.row.armed .del{opacity:.85}            /* 手机长按后亮出来 */
+@media (hover:none){ .del{opacity:0} }  /* 手机上平时完全不显示 */
 .row:hover .del{color:var(--dim)}
 .del:hover{color:var(--bad)}
 .row .d{font-size:14px;color:var(--dim);margin-top:2px}
@@ -1998,6 +2006,7 @@ body.wordtip .tip:hover::after{display:none}
   .cr{min-height:0}
   .cr{padding-left:0;border-left:none;margin-top:10px;padding-top:10px;
     border-top:1px solid var(--line)}
+  .del{right:-4px;top:4px}
   .exi .en{white-space:normal}
 }
 </style></head><body>
@@ -2180,8 +2189,9 @@ async function loadAll(q, page){
       ${(!w.examples||!w.examples.length)?(st.has_key
           ? `<div class="wait">writing examples…</div>`
           : (w.sentence?`<div class="s">${esc(w.sentence)}</div>`:"")):""}
+    <button class="del" title="Remove — and stop capturing this word" onclick="forget(${w.id},event)">×</button>
     </div>
-    <button class="del" title="Remove — and stop capturing this word" onclick="forget(${w.id},event)">×</button></div>`;
+    </div>`;
   }).join("") + pagerHTML()
     :`<div class="empty">No matches</div>`;
   // 还有词在等例句就自动刷新，不用你手动刷
@@ -2322,6 +2332,21 @@ document.addEventListener("dblclick",async e=>{
                            : `${r.word} · saved`));
   if(tab==="all"){ await loadAll($("#q")?$("#q").value.trim():""); flashRow(r&&r.id); }
 });
+
+// 手机上没有 hover：长按卡片 0.55 秒才把删除按钮亮出来
+(function(){
+  let t=null;
+  const clear=()=>{ clearTimeout(t); t=null; };
+  document.addEventListener("touchstart", e=>{
+    const row=e.target.closest(".row");
+    document.querySelectorAll(".row.armed").forEach(x=>{ if(x!==row) x.classList.remove("armed"); });
+    if(!row || e.target.closest(".del")) return;
+    clear();
+    t=setTimeout(()=>row.classList.add("armed"), 550);
+  }, {passive:true});
+  ["touchend","touchmove","touchcancel","scroll"].forEach(
+    ev=>document.addEventListener(ev, clear, {passive:true, capture:true}));
+})();
 
 window.forget=async(id,ev)=>{
   ev.stopPropagation();
@@ -2859,7 +2884,20 @@ def cmd_serve(args, cfg):
     dict_backfill(_c)
     _c.close()
     host = "0.0.0.0" if args.lan else "127.0.0.1"
-    token = secrets.token_urlsafe(9) if args.lan else ""
+    token = ""
+    if args.lan:
+        token = (cfg.get("lan_token") or "").strip()
+        if not token:                       # 生成一次就存下来，链接从此不变
+            token = secrets.token_urlsafe(9)
+            raw = {}
+            if os.path.exists(CFG_PATH):
+                try:
+                    with open(CFG_PATH, "r", encoding="utf-8") as f:
+                        raw = json.load(f) or {}
+                except Exception:
+                    raw = {}
+            raw["lan_token"] = token
+            save_cfg(raw)
     try:
         httpd = ThreadingHTTPServer((host, args.port), make_handler(cfg, token))
     except OSError as e:
@@ -2869,9 +2907,18 @@ def cmd_serve(args, cfg):
             return 1
         raise
     if args.lan:
+        import subprocess as _sp
+        try:
+            hostname = _sp.run(["scutil", "--get", "LocalHostName"], timeout=5,
+                               stdout=_sp.PIPE).stdout.decode().strip()
+        except Exception:
+            hostname = ""
         url = "http://%s:%d/?k=%s" % (_lan_ip(), args.port, token)
-        print(yellow("  局域网模式：同一 wifi 下的设备都能访问，靠 URL 里的 token 挡一挡。"))
+        print(yellow("  局域网模式：同一 wifi 下、拿到这个链接的人都能读写你的词库。"))
         print(dim("  别在公共 wifi 上开。手机浏览器打开："))
+        if hostname:
+            print("  %s" % bold("http://%s.local:%d/?k=%s" % (hostname, args.port, token)))
+            print(dim("  换了 wifi 导致 IP 变化时，上面这条仍然有效；下面这条是 IP 直连备用："))
     else:
         url = "http://127.0.0.1:%d/" % args.port
     print("  %s" % bold(url))
