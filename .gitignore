@@ -10,3 +10,6 @@ dict.db.tmp
 # 体积大的可再生成资源
 freq-10k.txt
 ecdict.csv
+
+# 运行期状态
+.selfcopy
