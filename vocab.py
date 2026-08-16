@@ -2344,7 +2344,6 @@ function flashRow(id){
   if(!el) return;
   el.classList.remove("flash"); void el.offsetWidth;    // 重置动画
   el.classList.add("flash");
-  el.scrollIntoView({block:"nearest",behavior:"smooth"});
 }
 
 function rowHTML(w, st){
@@ -2535,7 +2534,8 @@ document.addEventListener("dblclick",async e=>{
   const r=await post("/api/add",{word:w,copied:true});
   toast(!r ? w : (r.merged ? `${r.word} · already saved · ${r.count}×`
                            : `${r.word} · saved`));
-  if(tab==="all"){ await loadAll($("#q")?$("#q").value.trim():""); flashRow(r&&r.id); }
+  // 不重排列表：你正在读的位置比「新词立刻跳到顶部」重要
+  if(tab==="all" && r && r.id) flashRow(r.id);
 });
 
 // 手机上没有 hover：长按卡片 0.55 秒才把删除按钮亮出来
@@ -2996,6 +2996,12 @@ def make_handler(cfg, token):
                         ensure_ascii=False))
                 if u.path == "/api/capture":
                     text = str(body.get("text") or "")
+                    # 网页双击会把词复制到剪贴板，Mac 守护进程随后又传上来，
+                    # 不拦住就会一个词记两次
+                    if is_selfcopy(text):
+                        return self._send(200, json.dumps(
+                            {"ok": True, "added": 0, "bumped": [],
+                             "skipped": "selfcopy"}, ensure_ascii=False))
                     added, pending, bumped, reason = process_text(
                         conn, text, cfg, source=str(body.get("source") or "剪贴板"))
                     return self._send(200, json.dumps(
