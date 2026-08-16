@@ -977,6 +977,25 @@ def cmd_freq(args, cfg):
 # ---------------------------------------------------------------- 离线词典
 
 DICT_PATH = os.path.join(VOCAB_HOME, "dict.db")
+SELFCOPY_PATH = os.path.join(VOCAB_HOME, ".selfcopy")
+
+
+def mark_selfcopy(word):
+    """网页上双击会把词复制到剪贴板，留个记号免得守护进程再当成一次「遇见」。"""
+    try:
+        with open(SELFCOPY_PATH, "w", encoding="utf-8") as f:
+            f.write("%s\t%.1f" % (word, time.time()))
+    except Exception:
+        pass
+
+
+def is_selfcopy(text, within=25):
+    try:
+        with open(SELFCOPY_PATH, encoding="utf-8") as f:
+            w, ts = f.read().split("\t")
+        return w == text.strip().lower() and (time.time() - float(ts)) < within
+    except Exception:
+        return False
 
 
 def dict_db():
@@ -1342,6 +1361,10 @@ def cmd_watch(args, cfg):
     conn = db()
 
     def handle(text, show_skip):
+        if is_selfcopy(text):
+            if show_skip:
+                print(dim("  跳过（网页刚复制的，不重复计数）  %s" % text.strip()[:40]))
+            return
         added, pending, bumped, reason = process_text(conn, text, cfg)
         head = (text.strip().replace("\n", " "))[:46]
         if reason:
@@ -2327,7 +2350,7 @@ document.addEventListener("dblclick",async e=>{
   if(!w) return;
   copyText(w, true);
   toast(w + " …");
-  const r=await post("/api/add",{word:w});
+  const r=await post("/api/add",{word:w,copied:true});
   toast(!r ? w : (r.merged ? `${r.word} · already saved · ${r.count}×`
                            : `${r.word} · saved`));
   if(tab==="all"){ await loadAll($("#q")?$("#q").value.trim():""); flashRow(r&&r.id); }
@@ -2705,6 +2728,8 @@ def make_handler(cfg, token):
                     if not w:
                         return self._send(400, json.dumps({"error": "empty"}))
                     sent = (body.get("context") or "").strip()
+                    if body.get("copied"):
+                        mark_selfcopy(w)
                     row = find_word(conn, w)
                     if row:
                         _bump(conn, row, w, sent, "网页", None)
