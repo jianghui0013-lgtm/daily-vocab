@@ -2161,7 +2161,7 @@ body.wordtip .tip:hover::after{display:none}
     <div class="tabs">
       <button class="tab on" data-t="all">Words</button>
       <button class="tab" data-t="news">News</button>
-      <button class="tab" data-t="review">Review<span class="badge hidden" id="due"></span></button>
+      <button class="tab" data-t="review">Review</button>
       <button class="tab" id="cnt" title="Show / hide Chinese">ZH</button>
       <button class="tab" data-t="set" title="Settings">⚙</button>
     </div>
@@ -2202,66 +2202,20 @@ function activate(t){
 }
 document.querySelectorAll(".tab[data-t]").forEach(
   b=>b.onclick=()=>activate(b.dataset.t));
-async function refreshBadge(){
-  const st=await api("/api/stats");
-  $("#due").textContent=st.queue_size;
-  $("#due").classList.toggle("hidden",!st.queue_size);
-  return st;
-}
+const refreshBadge=()=>api("/api/stats");
 
-// ---------- 复习
+// ---------- 复习：同样的卡片版面，每次进来随机翻出一批老词
 async function loadQueue(){
-  Q=await api("/api/queue"); qi=0; flipped=false; drawCard(); refreshBadge();
+  const el = $("#review");
+  const st = await api("/api/stats");
+  const data = await api("/api/words?random=1&n=20");
+  const rows = data.rows || [];
+  if(!rows.length){ el.innerHTML = `<div class="empty">No words yet.</div>`; return; }
+  el.innerHTML =
+    `<div class="count">${rows.length} random words out of ${data.total}
+       <a class="lk" style="margin-left:10px" onclick="loadQueue()">shuffle</a></div>
+     ${rows.map(w => rowHTML(w, st)).join("")}`;
 }
-function drawCard(){
-  const el=$("#review");
-  if(qi>=Q.length){ return doneView(el); }
-  const w=Q[qi];
-  const pct=Math.round(qi/Q.length*100);
-  let h=`<div class="prog"><i style="width:${pct}%"></i></div><div class="card">
-    <div class="word${flipped&&w.definition?" tip":""}"${flipped&&w.definition?` data-zh="${esc(w.definition)}"`:""}><span class="wt">${esc(w.word)}</span></div>
-    ${w.phonetic&&flipped?`<div class="phon">${esc(w.phonetic)} ${esc(w.pos||"")}</div>`:""}`;
-  const c0=w.contexts[0];
-  if(c0) h+=`<div class="sent">${flipped?esc(c0.sentence):c0.masked}</div>`;
-  if(flipped){
-    if(w.definition_en) h+=`<div class="den">${esc(w.definition_en)}</div>`;
-    h+=`<div class="def zh">${esc(w.definition||"—")}</div>`;
-    w.contexts.forEach((c,i)=>{ if(c.meaning) h+=`<div class="mean zh">→ ${esc(c.meaning)}</div>`;
-      if(i>0) h+=`<div class="sent">${esc(c.sentence)}</div>`; });
-    h+=exHTML(w.examples);
-  }
-  h+="</div>";
-  h+= flipped
-    ? `<div class="btns">
-         <button class="g g1" onclick="grade(1)">Forgot<small>1</small></button>
-         <button class="g g2" onclick="grade(2)">Unsure<small>2</small></button>
-         <button class="g g3" onclick="grade(3)">Got it<small>3</small></button></div>`
-    : `<button class="big" onclick="flip()">Flip</button>
-       <div class="hint">space to flip · ${qi+1}/${Q.length}</div>`;
-  el.innerHTML=h;
-}
-function doneView(el){
-  api("/api/stats").then(s=>{
-    el.innerHTML=`<div class="stats">
-      <div class="stat"><b>${s.total}</b><span>total</span></div>
-      <div class="stat"><b>${s.new}</b><span>new</span></div>
-      <div class="stat"><b>${s.learning+s.review}</b><span>learning</span></div>
-      <div class="stat"><b>${s.known}</b><span>known</span></div></div>
-      <div class="empty">All done for today ✓<br><br>
-      <span style="font-size:13px">next due ${esc(s.next_due||"—")}</span></div>`;
-  });
-}
-window.flip=()=>{flipped=true;drawCard()};
-window.grade=async g=>{
-  const w=Q[qi];
-  await post("/api/grade",{id:w.id,grade:g});
-  qi++; flipped=false; drawCard();
-};
-document.addEventListener("keydown",e=>{
-  if(tab!=="review"||qi>=Q.length) return;
-  if(e.key===" "&&!flipped){e.preventDefault();flip();}
-  else if(flipped&&["1","2","3"].includes(e.key)) grade(+e.key);
-});
 
 // ---------- 全部
 function pagerHTML(){
@@ -2354,6 +2308,23 @@ function flashRow(id){
   el.scrollIntoView({block:"nearest",behavior:"smooth"});
 }
 
+function rowHTML(w, st){
+  return `<div class="row" data-id="${w.id}">
+    <div class="cl">
+      <div class="w${w.definition?" tip":""}"${w.definition?` data-zh="${esc(w.definition)}"`:""}><span class="wt">${esc(w.word)}</span>${w.phonetic?`<span class="ph">${esc(w.phonetic)}</span>`:""}${w.encounter_count>1?`<span class="meta">×${w.encounter_count}</span>`:""}${starHTML(w.id,w.study_count)}</div>
+      ${w.definition_en?`<div class="den">${esc(w.definition_en)}</div>`:""}
+      ${w.definition?`<div class="d zh">${esc(w.definition)}</div>`:""}
+    </div>
+    <div class="cr">
+      ${exHTML(w.examples)}
+      ${(!w.examples||!w.examples.length)?(st.has_key
+          ? `<div class="wait">writing examples\u2026</div>`
+          : (w.sentence?`<div class="s">${esc(w.sentence)}</div>`:"")):""}
+      <button class="del" title="Remove — and stop capturing this word" onclick="forget(${w.id},event)">×</button>
+    </div>
+  </div>`;
+}
+
 let _seq=0, curPage=1, totalPages=1;
 async function loadAll(q, page){
   const my=++_seq;                 // 打字快时多个请求并发，只认最后发出的那次
@@ -2386,20 +2357,7 @@ async function loadAll(q, page){
   $("#rows").innerHTML=rows.length?rows.map(w=>{
     const d=(w.updated_at||"").slice(0,10);
     const head = d && d!==lastDay ? (lastDay=d, `<div class="nday">${esc(d)}</div>`) : "";
-    return head + `<div class="row" data-id="${w.id}">
-    <div class="cl">
-      <div class="w${w.definition?" tip":""}"${w.definition?` data-zh="${esc(w.definition)}"`:""}><span class="wt">${esc(w.word)}</span>${w.phonetic?`<span class="ph">${esc(w.phonetic)}</span>`:""}${w.encounter_count>1?`<span class="meta">×${w.encounter_count}</span>`:""}${starHTML(w.id,w.study_count)}</div>
-      ${w.definition_en?`<div class="den">${esc(w.definition_en)}</div>`:""}
-      ${w.definition?`<div class="d zh">${esc(w.definition)}</div>`:""}
-    </div>
-    <div class="cr">
-      ${exHTML(w.examples)}
-      ${(!w.examples||!w.examples.length)?(st.has_key
-          ? `<div class="wait">writing examples…</div>`
-          : (w.sentence?`<div class="s">${esc(w.sentence)}</div>`:"")):""}
-    <button class="del" title="Remove — and stop capturing this word" onclick="forget(${w.id},event)">×</button>
-    </div>
-    </div>`;
+    return head + rowHTML(w, st);
   }).join("") + pagerHTML()
     :`<div class="empty">No matches</div>`;
   // 还有词在等例句就自动刷新，不用你手动刷
@@ -2816,6 +2774,25 @@ def make_handler(cfg, token):
                     if q:
                         where = " WHERE w.word LIKE ? OR w.definition LIKE ?"
                         args_ = ["%" + q + "%", "%" + q + "%"]
+                    if qs.get("random", [""])[0] == "1":
+                        try:
+                            n_ = min(60, max(1, int(qs.get("n", ["20"])[0])))
+                        except ValueError:
+                            n_ = 20
+                        out = []
+                        for r in conn.execute(
+                                "SELECT w.*, r.status, (SELECT sentence FROM contexts c"
+                                " WHERE c.word_id=w.id ORDER BY c.id DESC LIMIT 1) AS sentence"
+                                " FROM words w JOIN reviews r ON r.word_id=w.id"
+                                " ORDER BY RANDOM() LIMIT ?", (n_,)):
+                            d = dict(r)
+                            d["examples"] = examples_of(conn, r["id"])
+                            out.append(d)
+                        return self._send(200, json.dumps(
+                            {"rows": out, "page": 1, "pages": 1,
+                             "total": conn.execute(
+                                 "SELECT COUNT(*) FROM words").fetchone()[0]},
+                            ensure_ascii=False))
                     total = conn.execute(
                         "SELECT COUNT(*) FROM words w" + where, args_).fetchone()[0]
                     pages = max(1, (total + size - 1) // size)
