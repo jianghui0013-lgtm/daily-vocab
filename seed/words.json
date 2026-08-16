@@ -1,7 +1,7 @@
 {
  "version": 1,
- "exported_at": "2026-08-16 09:35:22",
- "count": 49,
+ "exported_at": "2026-08-16 09:47:57",
+ "count": 50,
  "words": [
   {
    "word": "audible",
@@ -1699,6 +1699,46 @@
     {
      "sentence": "The startup pivoted after burning through its runway.",
      "meaning": "指公司能维持运营的资金或时间，本句中表示烧完资金之前的时间",
+     "source": "剪贴板"
+    }
+   ],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-16",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "soho",
+   "lemma": "soho",
+   "phonetic": "/ˈsoʊhoʊ/",
+   "pos": "n.",
+   "definition": "苏豪区（纽约曼哈顿的街区）；SOHO（居家办公）",
+   "definition_en": "a district in southwestern Manhattan noted for its shops and restaurants and galleries and artist's lofts · a city district of central London now noted for restaurants and nightclubs",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 09:43:35",
+   "examples": [
+    {
+     "en": "SoHo is a great place to see modern art.",
+     "zh": "苏豪区是欣赏现代艺术的好地方。"
+    },
+    {
+     "en": "I set up a SOHO office in my spare room.",
+     "zh": "我在空房间布置了一个居家办公室。"
+    },
+    {
+     "en": "Many freelancers start with a SOHO business.",
+     "zh": "许多自由职业者从居家办公生意做起。"
+    }
+   ],
+   "contexts": [
+    {
+     "sentence": "SoHo → Tribeca → Chelsea → High Line → Hudson Yards",
+     "meaning": "指纽约曼哈顿的一个街区，是游览路线中的起点",
      "source": "剪贴板"
     }
    ],
