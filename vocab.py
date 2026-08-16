@@ -2684,6 +2684,9 @@ def make_handler(cfg, token):
         def _authed(self, qs):
             if not token:
                 return True
+            # 本机访问不用口令：能坐在这台电脑前的人，本来就能直接打开数据库文件
+            if self.client_address and self.client_address[0] in ("127.0.0.1", "::1"):
+                return True
             return qs.get("k", [""])[0] == token
 
         def _guard(self, fn):
