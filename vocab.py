@@ -2567,7 +2567,15 @@ window.forget=async(id,ev)=>{
   }
   clearTimeout(window._arm);
   await post("/api/forget",{id});
-  loadAll($("#q")?$("#q").value.trim():"");
+  const row = document.querySelector(`.row[data-id="${id}"]`);
+  if(row) row.remove();                       // 当场消失，两个页面都适用
+  if(tab === "all"){                          // 单词页还要更新总数和分页
+    loadAll($("#q") ? $("#q").value.trim() : "");
+  } else if(tab === "review"){
+    const n = document.querySelectorAll("#review .row").length;
+    const c = document.querySelector("#review .count");
+    if(c) c.firstChild.textContent = ` ${n} random words `;
+  }
 };
 
 // ---------- 新闻
