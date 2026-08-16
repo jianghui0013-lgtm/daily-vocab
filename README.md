@@ -25,6 +25,15 @@
 配了 api_key 的话，词典查不到的词才会问 AI；不配就纯离线，什么都不外发。
 api_key 若不是合法格式（含中文、太短）会被自动忽略，不会拿去请求。
 
+## 改代码的流程
+
+    v preview            # 本机预览，独立数据目录，改动不影响正式库
+    v preview --fresh    # 重新从正式库拷一份数据
+    ~/.vocab/deploy.sh "说明"   # 满意了：提交 + 推 GitHub + 服务器拉取重启 + 验证
+
+预览跑在 http://127.0.0.1:8790，数据在 ~/.vocab/preview/，
+词典是软链（不占额外空间），词库是拷贝（随便删不心疼）。
+
 ## 用法
 
     v add rescind -c "the board voted to rescind the offer" -s FT

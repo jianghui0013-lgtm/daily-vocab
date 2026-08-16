@@ -1858,6 +1858,45 @@ def news_due(conn, cfg, now=None):
     return max(0, int(cfg.get("news_count", 10)) - have)
 
 
+def cmd_preview(args, cfg):
+    """在本机起一个隔离的预览实例：改完先看，满意了再部署到服务器。
+
+    用独立的数据目录 ~/.vocab/preview，词典做软链省空间，
+    词库每次从正式库拷一份 —— 在里面随便点、随便删都不会影响真实数据。
+    """
+    import subprocess as sp
+    home = os.path.join(VOCAB_HOME, "preview")
+    os.makedirs(home, exist_ok=True)
+
+    link = os.path.join(home, "dict.db")
+    if not os.path.exists(link):
+        if not os.path.exists(DICT_PATH):
+            print(red("本机没有离线词典，预览里查不到释义"))
+        else:
+            os.symlink(DICT_PATH, link)
+
+    pv_db = os.path.join(home, "vocab.db")
+    if args.fresh or not os.path.exists(pv_db):
+        for suffix in ("", "-wal", "-shm"):
+            src = DB_PATH + suffix
+            if os.path.exists(src):
+                shutil.copy(src, pv_db + suffix)
+        print(dim("  已从正式库拷一份数据到预览环境"))
+
+    print(green("  预览环境（改动只影响这里，不动真实数据）"))
+    print(dim("  数据目录 %s" % home))
+    env = dict(os.environ, VOCAB_HOME=home)
+    env.pop("VOCAB_TOKEN", None)
+    cmd = [sys.executable, os.path.abspath(__file__), "serve", "-p", str(args.port)]
+    if not args.no_open:
+        cmd.append("--open")
+    try:
+        sp.run(cmd, env=env)
+    except KeyboardInterrupt:
+        pass
+    return 0
+
+
 def cmd_export(args, cfg):
     """把整个词库导成 JSON —— 备份、换机器、部署到服务器都用它。"""
     conn = db()
@@ -3212,6 +3251,12 @@ def main():
     sv.add_argument("--lan", action="store_true", help="局域网可访问（手机刷），带 token")
     sv.add_argument("--open", action="store_true", help="顺手打开浏览器")
     sv.set_defaults(func=cmd_serve)
+
+    pv = sub.add_parser("preview", help="本机预览改动，数据隔离，不影响正式库")
+    pv.add_argument("-p", "--port", type=int, default=8790)
+    pv.add_argument("--fresh", action="store_true", help="重新从正式库拷一份数据")
+    pv.add_argument("--no-open", action="store_true", help="不自动打开浏览器")
+    pv.set_defaults(func=cmd_preview)
 
     ep = sub.add_parser("export", help="把词库导出成 JSON（备份/迁移）")
     ep.add_argument("path", nargs="?")
