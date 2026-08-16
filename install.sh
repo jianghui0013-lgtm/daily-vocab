@@ -96,7 +96,11 @@ else
   sleep 2
 fi
 
-IP=$(curl -s --max-time 5 https://api.ipify.org || hostname -I | awk '{print $1}')
+# 取公网 IP：先问云厂商的元数据服务（国内访问 ipify 常超时），再退回内网地址
+IP=$(curl -s --max-time 3 http://metadata.tencentyun.com/latest/meta-data/public-ipv4 2>/dev/null) || true
+[ -n "${IP:-}" ] || IP=$(curl -s --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null) || true
+[ -n "${IP:-}" ] || IP=$(curl -s --max-time 4 https://api.ipify.org 2>/dev/null) || true
+[ -n "${IP:-}" ] || { IP=$(hostname -I | awk '{print $1}'); echo "  （取不到公网 IP，下面显示的是内网地址，请自行换成控制台上的公网 IP）"; }
 cat <<EOF
 
 ────────────────────────────────────────
