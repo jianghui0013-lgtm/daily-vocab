@@ -1356,12 +1356,12 @@ def read_clipboard():
 
 def post_capture(base, text, quiet=True):
     """把剪贴板内容发给远端服务器，由它跑抓词流水线。"""
+    from urllib.parse import urlsplit, urlunsplit
+    u = urlsplit(base)
+    url = urlunsplit((u.scheme or "http", u.netloc, "/api/capture", u.query, ""))
     try:
-        sep = "&" if "?" in base else "?"
         req = urllib.request.Request(
-            base.rstrip("/").replace("/?", "?") + "/api/capture" + (
-                sep + base.split("?", 1)[1] if "?" in base else ""),
-            data=json.dumps({"text": text}, ensure_ascii=False).encode("utf-8"),
+            url, data=json.dumps({"text": text}, ensure_ascii=False).encode("utf-8"),
             headers={"Content-Type": "application/json"}, method="POST")
         with urllib.request.urlopen(req, timeout=25) as r:
             return json.loads(r.read().decode("utf-8"))
