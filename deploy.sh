@@ -34,7 +34,7 @@ ssh -o ConnectTimeout=10 "$HOST" '
   sleep 2
   systemctl is-active --quiet vocab-web && echo "  网页服务已重启" || {
     echo "  启动失败："; sudo journalctl -u vocab-web -n 20 --no-pager; exit 1; }
-  echo "  服务器代码: $(git -C /opt/vocab log --oneline -1)"
+  echo "  服务器代码: $(sudo git -C /opt/vocab log --oneline -1)"
 '
 
 say "4/4 验证"
