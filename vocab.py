@@ -1354,13 +1354,38 @@ def read_clipboard():
         return ""
 
 
+def post_capture(base, text, quiet=True):
+    """把剪贴板内容发给远端服务器，由它跑抓词流水线。"""
+    try:
+        sep = "&" if "?" in base else "?"
+        req = urllib.request.Request(
+            base.rstrip("/").replace("/?", "?") + "/api/capture" + (
+                sep + base.split("?", 1)[1] if "?" in base else ""),
+            data=json.dumps({"text": text}, ensure_ascii=False).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=25) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except Exception as e:
+        if not quiet:
+            print(dim("  发送失败: %s" % str(e)[:70]))
+        return None
+
+
 def cmd_watch(args, cfg):
-    if not shutil.which("pbpaste"):
-        print(red("找不到 pbpaste，这个功能只支持 macOS"))
-        return 1
+    has_clip = bool(shutil.which("pbpaste"))   # 服务器（Linux）没有剪贴板
+    remote = (args.server or os.environ.get("VOCAB_SERVER") or "").strip()
     conn = db()
 
     def handle(text, show_skip):
+        if remote:                              # 词交给服务器，本机不存
+            r = post_capture(remote, text, quiet=not show_skip)
+            if r and (r.get("added") or r.get("bumped")):
+                print("  %s  %s" % (
+                    green("上传 %d" % (r.get("added") or 0)),
+                    dim((text.strip().replace("\n", " "))[:46])))
+            elif show_skip:
+                print(dim("  跳过  %s" % (text.strip()[:46])))
+            return
         if is_selfcopy(text):
             if show_skip:
                 print(dim("  跳过（网页刚复制的，不重复计数）  %s" % text.strip()[:40]))
@@ -1384,13 +1409,19 @@ def cmd_watch(args, cfg):
                 notify("生词本", "入库 %d，待确认 %d" % (added, pending), cfg)
 
     if args.once:
+        if not has_clip:
+            print(red("这台机器没有剪贴板"))
+            return 1
         handle(read_clipboard(), True)
         return 0
 
     gc_orphans(conn)
     dict_backfill(conn)
-    print(dim("盯着剪贴板…  复制一句英文就自动抽生词  ·  Ctrl-C 退出"))
-    last = hashlib.md5(read_clipboard().encode("utf-8", "ignore")).hexdigest()
+    if has_clip:
+        print(dim("盯着剪贴板…  复制一句英文就自动抽生词  ·  Ctrl-C 退出"))
+    else:
+        print(dim("没有剪贴板（非 macOS），只跑新闻抓取和例句生成  ·  Ctrl-C 退出"))
+    last = hashlib.md5(read_clipboard().encode("utf-8", "ignore")).hexdigest() if has_clip else ""
     tick = 0
     while True:
         time.sleep(cfg["watch_interval"])
@@ -1437,6 +1468,8 @@ def cmd_watch(args, cfg):
                         conn.commit()
             except Exception as e:
                 print(dim("  例句生成出错: %s" % e))
+        if not has_clip:
+            continue                       # 服务器上只跑上面那些后台任务
         try:
             cur = read_clipboard()
         except Exception:
@@ -1823,6 +1856,81 @@ def news_due(conn, cfg, now=None):
     day = now.strftime("%Y-%m-%d")
     have = conn.execute("SELECT COUNT(*) FROM news WHERE day = ?", (day,)).fetchone()[0]
     return max(0, int(cfg.get("news_count", 10)) - have)
+
+
+def cmd_export(args, cfg):
+    """把整个词库导成 JSON —— 备份、换机器、部署到服务器都用它。"""
+    conn = db()
+    out = []
+    for w in conn.execute("SELECT * FROM words ORDER BY id"):
+        r = conn.execute("SELECT * FROM reviews WHERE word_id=?", (w["id"],)).fetchone()
+        out.append({
+            "word": w["word"], "lemma": w["lemma"], "phonetic": w["phonetic"],
+            "pos": w["pos"], "definition": w["definition"],
+            "definition_en": w["definition_en"],
+            "study_count": w["study_count"], "encounter_count": w["encounter_count"],
+            "created_at": w["created_at"],
+            "examples": [dict(e) for e in conn.execute(
+                "SELECT en, zh FROM examples WHERE word_id=? AND en!='' ORDER BY id",
+                (w["id"],))],
+            "contexts": [dict(c) for c in conn.execute(
+                "SELECT sentence, meaning, source FROM contexts WHERE word_id=? ORDER BY id",
+                (w["id"],))],
+            "review": {k: r[k] for k in
+                       ("status", "due_date", "interval", "ease", "reps", "lapses")} if r else None,
+        })
+    data = {"version": 1, "exported_at": now_iso(), "count": len(out), "words": out}
+    path = args.path or os.path.join(VOCAB_HOME, "words.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    print(green("已导出 %d 个词 -> %s" % (len(out), path)))
+    return 0
+
+
+def cmd_import(args, cfg):
+    """从 JSON 导回词库。已存在的词跳过，不覆盖。"""
+    if not args.path or not os.path.exists(args.path):
+        print(red("文件不存在：%s" % args.path))
+        return 1
+    with open(args.path, encoding="utf-8") as f:
+        data = json.load(f)
+    conn = db()
+    added = skipped = 0
+    for it in data.get("words", []):
+        w = normalize(it.get("word") or "")
+        if not w:
+            continue
+        if find_word(conn, w):
+            skipped += 1
+            continue
+        ts = it.get("created_at") or now_iso()
+        cur = conn.execute(
+            "INSERT INTO words (word, lemma, phonetic, pos, definition, definition_en,"
+            " study_count, encounter_count, created_at, updated_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (w, it.get("lemma") or w, it.get("phonetic"), it.get("pos"),
+             it.get("definition"), it.get("definition_en"),
+             it.get("study_count") or 1, it.get("encounter_count") or 1, ts, ts))
+        wid = cur.lastrowid
+        rv = it.get("review") or {}
+        conn.execute(
+            "INSERT OR REPLACE INTO reviews (word_id, status, due_date, interval, ease,"
+            " reps, lapses) VALUES (?,?,?,?,?,?,?)",
+            (wid, rv.get("status") or "new", rv.get("due_date") or today(),
+             rv.get("interval") or 0, rv.get("ease") or 2.5,
+             rv.get("reps") or 0, rv.get("lapses") or 0))
+        for e in it.get("examples") or []:
+            conn.execute("INSERT INTO examples (word_id, en, zh, created_at) VALUES (?,?,?,?)",
+                         (wid, e.get("en") or "", e.get("zh") or "", ts))
+        for c in it.get("contexts") or []:
+            conn.execute(
+                "INSERT INTO contexts (word_id, surface, sentence, meaning, source, created_at)"
+                " VALUES (?,?,?,?,?,?)",
+                (wid, w, c.get("sentence"), c.get("meaning"), c.get("source"), ts))
+        added += 1
+    conn.commit()
+    print(green("导入 %d 个词，跳过已有 %d 个" % (added, skipped)))
+    return 0
 
 
 def cmd_news(args, cfg):
@@ -2754,6 +2862,13 @@ def make_handler(cfg, token):
                     return self._send(200, json.dumps(
                         {"ok": True, "merged": False, "word": lemma, "id": wid},
                         ensure_ascii=False))
+                if u.path == "/api/capture":
+                    text = str(body.get("text") or "")
+                    added, pending, bumped, reason = process_text(
+                        conn, text, cfg, source=str(body.get("source") or "剪贴板"))
+                    return self._send(200, json.dumps(
+                        {"ok": True, "added": added, "bumped": sorted(set(bumped)),
+                         "skipped": reason}, ensure_ascii=False))
                 if u.path == "/api/news/fetch":
                     day = datetime.now().strftime("%Y-%m-%d")
                     have = conn.execute("SELECT COUNT(*) FROM news WHERE day = ?",
@@ -2911,7 +3026,7 @@ def cmd_serve(args, cfg):
     host = "0.0.0.0" if args.lan else "127.0.0.1"
     token = ""
     if args.lan:
-        token = (cfg.get("lan_token") or "").strip()
+        token = (os.environ.get("VOCAB_TOKEN") or cfg.get("lan_token") or "").strip()
         if not token:                       # 生成一次就存下来，链接从此不变
             token = secrets.token_urlsafe(9)
             raw = {}
@@ -2999,6 +3114,7 @@ def main():
     w = sub.add_parser("watch", help="盯着剪贴板自动抓生词")
     w.add_argument("--once", action="store_true", help="只处理当前剪贴板内容一次")
     w.add_argument("-v", "--verbose", action="store_true", help="连跳过的也打印出来")
+    w.add_argument("--server", help="把抓到的词发给远端服务器，例如 https://x.com/?k=口令")
     w.set_defaults(func=cmd_watch)
 
     ib = sub.add_parser("inbox", help="确认自动抓来的待定词")
@@ -3011,6 +3127,14 @@ def main():
     sv.add_argument("--lan", action="store_true", help="局域网可访问（手机刷），带 token")
     sv.add_argument("--open", action="store_true", help="顺手打开浏览器")
     sv.set_defaults(func=cmd_serve)
+
+    ep = sub.add_parser("export", help="把词库导出成 JSON（备份/迁移）")
+    ep.add_argument("path", nargs="?")
+    ep.set_defaults(func=cmd_export)
+
+    ip = sub.add_parser("import", help="从 JSON 导回词库")
+    ip.add_argument("path")
+    ip.set_defaults(func=cmd_import)
 
     nw = sub.add_parser("news", help="每天的英文商业新闻")
     nw.add_argument("--fetch", action="store_true", help="立刻抓一次")

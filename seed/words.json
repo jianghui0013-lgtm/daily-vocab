@@ -1,0 +1,1715 @@
+{
+ "version": 1,
+ "exported_at": "2026-08-16 09:35:22",
+ "count": 49,
+ "words": [
+  {
+   "word": "audible",
+   "lemma": "audible",
+   "phonetic": "/'ɒ:dәbl/",
+   "pos": "",
+   "definition": "a. 听得见的; [电] 可闻的",
+   "definition_en": "heard or perceptible by the ear",
+   "study_count": 2,
+   "encounter_count": 4,
+   "created_at": "2026-08-15 21:18:53",
+   "examples": [
+    {
+     "en": "Her voice was barely audible over the traffic.",
+     "zh": "车流声中，她的声音几乎听不见。"
+    },
+    {
+     "en": "He gave an audible sigh of relief.",
+     "zh": "他发出一声听得见的宽慰叹息。"
+    },
+    {
+     "en": "The music was audible from the street.",
+     "zh": "从街上就能听见那音乐。"
+    }
+   ],
+   "contexts": [
+    {
+     "sentence": "The alarm was barely audible from the kitchen.",
+     "meaning": null,
+     "source": "剪贴板"
+    }
+   ],
+   "review": {
+    "status": "learning",
+    "due_date": "2026-08-16",
+    "interval": 1,
+    "ease": 2.5,
+    "reps": 1,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "playbook",
+   "lemma": "playbook",
+   "phonetic": "",
+   "pos": "",
+   "definition": "n. 剧本, 剧本集",
+   "definition_en": "a notebook containing descriptions and diagrams of the plays that a team has practiced (especially an American football team) · a book containing the scripts of one or more dramatic plays",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 21:19:49",
+   "examples": [
+    {
+     "en": "The team followed the coach's playbook exactly.",
+     "zh": "球队完全照着教练的战术手册打。"
+    },
+    {
+     "en": "That trick is straight out of the startup playbook.",
+     "zh": "那一招完全是创业公司的老套路。"
+    },
+    {
+     "en": "We need a new playbook for this market.",
+     "zh": "这个市场我们需要一套新打法。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "relief",
+   "lemma": "relief",
+   "phonetic": "/ri'li:f/",
+   "pos": "",
+   "definition": "n. 减轻, 解除, 救济, 安慰, 调剂, 浮雕, 换班, (地势的)起伏; [医] 缓减, 减轻, 浮雕(绘画中)",
+   "definition_en": "the feeling that comes when something burdensome is removed or reduced · the condition of being comfortable or relieved (especially after being relieved of distress)",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 22:47:31",
+   "examples": [
+    {
+     "en": "What a relief to finally finish the exam!",
+     "zh": "终于考完试了，真是如释重负！"
+    },
+    {
+     "en": "They sent food and medicine for disaster relief.",
+     "zh": "他们送去了食品和药品用于救灾。"
+    },
+    {
+     "en": "The medicine gave her quick relief from the headache.",
+     "zh": "这种药很快缓解了她的头痛。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "perceptible",
+   "lemma": "perceptible",
+   "phonetic": "/pә'septibl/",
+   "pos": "",
+   "definition": "a. 可察觉的, 能感觉得到的, 看得见的",
+   "definition_en": "capable of being perceived by the mind or senses · easily perceived by the senses or grasped by the mind",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 22:51:28",
+   "examples": [
+    {
+     "en": "There was a perceptible change in her mood.",
+     "zh": "她的情绪有了明显的变化。"
+    },
+    {
+     "en": "The difference is barely perceptible to the eye.",
+     "zh": "这种差异肉眼几乎察觉不到。"
+    },
+    {
+     "en": "His voice was barely perceptible above the noise.",
+     "zh": "他的声音在嘈杂中几乎听不见。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "burdensome",
+   "lemma": "burdensome",
+   "phonetic": "/'bә:dnsәm/",
+   "pos": "",
+   "definition": "a. 累赘的, 恼人的, 繁重的; [法] 难于负担的, 压抑的, 累赘的",
+   "definition_en": "not easily borne; wearing; I only had to greet the guests\"",
+   "study_count": 2,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 22:54:30",
+   "examples": [
+    {
+     "en": "The heavy backpack became burdensome during the long hike.",
+     "zh": "沉重的背包在长途徒步中变得累赘。"
+    },
+    {
+     "en": "She found the paperwork too burdensome to finish alone.",
+     "zh": "她发现这些文书工作太繁重，一个人完成不了。"
+    },
+    {
+     "en": "The new regulations place a burdensome load on small businesses.",
+     "zh": "新法规给小企业带来了沉重的负担。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "placate",
+   "lemma": "placate",
+   "phonetic": "/plә'keit/",
+   "pos": "",
+   "definition": "vt. 抚慰, 平息, 使和解, 怀柔",
+   "definition_en": "cause to be more favorably inclined; gain the good will of",
+   "study_count": 5,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 22:56:31",
+   "examples": [
+    {
+     "en": "She placated the crying baby with a toy.",
+     "zh": "她用一个玩具抚慰了哭闹的婴儿。"
+    },
+    {
+     "en": "The manager tried to placate angry customers.",
+     "zh": "经理试图安抚愤怒的顾客。"
+    },
+    {
+     "en": "He placated his boss by finishing the report early.",
+     "zh": "他提前完成报告，以此安抚老板。"
+    }
+   ],
+   "contexts": [
+    {
+     "sentence": "He tried to placate the irate customer at the counter.",
+     "meaning": "",
+     "source": "剪贴板"
+    }
+   ],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "irate",
+   "lemma": "irate",
+   "phonetic": "/'aireit/",
+   "pos": "",
+   "definition": "a. 发怒的, 生气的",
+   "definition_en": "feeling or showing extreme anger",
+   "study_count": 2,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 22:56:31",
+   "examples": [
+    {
+     "en": "The irate customer demanded a refund.",
+     "zh": "愤怒的顾客要求退款。"
+    },
+    {
+     "en": "She received an irate email from her boss.",
+     "zh": "她收到老板一封怒气冲冲的邮件。"
+    },
+    {
+     "en": "The irate driver honked his horn loudly.",
+     "zh": "愤怒的司机大声按喇叭。"
+    }
+   ],
+   "contexts": [
+    {
+     "sentence": "He tried to placate the irate customer at the counter.",
+     "meaning": "",
+     "source": "剪贴板"
+    }
+   ],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "horn",
+   "lemma": "horn",
+   "phonetic": "/hɒ:n/",
+   "pos": "",
+   "definition": "n. 角, 角质, 喇叭, 号角; a. 角制的; vt. 用角触, 长角于",
+   "definition_en": "a noisemaker (as at parties or games) that makes a loud noise when you blow through it · one of the bony outgrowths on the heads of certain ungulates",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:01:28",
+   "examples": [
+    {
+     "en": "The bull has a sharp horn.",
+     "zh": "公牛有一只尖角。"
+    },
+    {
+     "en": "He honked the horn to warn others.",
+     "zh": "他按喇叭警告其他人。"
+    },
+    {
+     "en": "The goat horned the fence.",
+     "zh": "山羊用角顶了栅栏。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "honk",
+   "lemma": "honk",
+   "phonetic": "/hɒŋk/",
+   "pos": "",
+   "definition": "n. 雁鸣, 汽车的喇叭声; vi. 雁鸣叫, 按汽车喇叭; vt. 揿(喇叭)",
+   "definition_en": "the cry of a goose (or any sound resembling this)",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:01:37",
+   "examples": [
+    {
+     "en": "The goose honked loudly in the morning.",
+     "zh": "那只鹅在清晨大声鸣叫。"
+    },
+    {
+     "en": "He honked the horn to warn the pedestrian.",
+     "zh": "他按响喇叭提醒行人。"
+    },
+    {
+     "en": "The car honked twice before the light turned green.",
+     "zh": "绿灯亮前，汽车鸣了两声喇叭。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "outgrowth",
+   "lemma": "outgrowth",
+   "phonetic": "/'autgrәuθ/",
+   "pos": "",
+   "definition": "n. 自然的发展, 结果, 副产物, 分枝; [医] 赘疣",
+   "definition_en": "a natural consequence of development",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:06:16",
+   "examples": [
+    {
+     "en": "Her success is an outgrowth of hard work.",
+     "zh": "她的成功是努力工作的自然结果。"
+    },
+    {
+     "en": "The new policy was an outgrowth of public demand.",
+     "zh": "新政策是公众需求的产物。"
+    },
+    {
+     "en": "The tumor is an abnormal outgrowth on the skin.",
+     "zh": "这个肿瘤是皮肤上的异常赘生物。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "consequence",
+   "lemma": "consequence",
+   "phonetic": "/'kɒnsikwәns/",
+   "pos": "",
+   "definition": "n. 结果, 重要性; [法] 结果, 后果, 推断",
+   "definition_en": "a phenomenon that follows and is caused by some previous phenomenon · the outcome of an event especially as relative to an individual",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:07:34",
+   "examples": [
+    {
+     "en": "As a consequence, we missed the train.",
+     "zh": "结果，我们错过了火车。"
+    },
+    {
+     "en": "He faced the consequences of his actions.",
+     "zh": "他承担了自己行为的后果。"
+    },
+    {
+     "en": "This is a matter of great consequence.",
+     "zh": "这是一件非常重要的事情。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "tumor",
+   "lemma": "tumor",
+   "phonetic": "/'tju:mә/",
+   "pos": "",
+   "definition": "n. 肿大, 肿块, 瘤, 赘生物, 肿瘤; [医] 瘤; 肿胀, 肿块",
+   "definition_en": "an abnormal new mass of tissue that serves no purpose",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:21:06",
+   "examples": [
+    {
+     "en": "The tumor was benign, so the patient was relieved.",
+     "zh": "肿瘤是良性的，所以病人松了一口气。"
+    },
+    {
+     "en": "He found a small tumor on his arm.",
+     "zh": "他胳膊上发现了一个小肿块。"
+    },
+    {
+     "en": "Doctors removed the tumor successfully.",
+     "zh": "医生成功切除了肿瘤。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "abnormal",
+   "lemma": "abnormal",
+   "phonetic": "/æb'nɒ:mәl/",
+   "pos": "",
+   "definition": "a. 反常的, 不规则的, 变态的, 畸形的; n. 畸形的人",
+   "definition_en": "not normal; not typical or usual or regular or conforming to a norm · departing from the normal in e.g. intelligence and development",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:21:09",
+   "examples": [
+    {
+     "en": "The weather is abnormal for this season.",
+     "zh": "这种天气在这个季节很不正常。"
+    },
+    {
+     "en": "His abnormal behavior worried his parents.",
+     "zh": "他反常的行为让父母担心。"
+    },
+    {
+     "en": "The test showed abnormal cells in her body.",
+     "zh": "检查显示她体内有异常细胞。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "goose",
+   "lemma": "goose",
+   "phonetic": "/gu:s/",
+   "pos": "",
+   "definition": "n. 鹅, 雌鹅, 鹅肉, 弯把熨斗; vt. 与...性交, 突然加大油门, 使生色, 喝倒彩",
+   "definition_en": "web-footed long-necked typically gregarious migratory aquatic birds usually larger and less aquatic than ducks · flesh of a goose (domestic or wild)",
+   "study_count": 1,
+   "encounter_count": 4,
+   "created_at": "2026-08-15 23:22:03",
+   "examples": [
+    {
+     "en": "A goose is swimming in the lake.",
+     "zh": "一只鹅在湖里游泳。"
+    },
+    {
+     "en": "I got goose bumps when I heard the scary story.",
+     "zh": "听到恐怖故事我起鸡皮疙瘩。"
+    },
+    {
+     "en": "The goose chased the children in the park.",
+     "zh": "鹅在公园里追孩子们。"
+    }
+   ],
+   "contexts": [
+    {
+     "sentence": "goose bumps",
+     "meaning": null,
+     "source": "剪贴板"
+    }
+   ],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "bear",
+   "lemma": "bear",
+   "phonetic": "/bєә/",
+   "pos": "",
+   "definition": "n. 熊; vt. 忍受, 支承, 产生, 怀有, 通过卖空使跌价; vi. 忍受, 结果实, 压挤, 行进, 转向",
+   "definition_en": "massive plantigrade carnivorous or omnivorous mammals with long shaggy coats and strong claws · an investor with a pessimistic market outlook; an investor who expects prices to fall and so sells now in order to buy later at a lower price",
+   "study_count": 2,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:26:14",
+   "examples": [
+    {
+     "en": "The bear is fishing in the river.",
+     "zh": "那只熊正在河里捕鱼。"
+    },
+    {
+     "en": "I can't bear the noise anymore.",
+     "zh": "我再也忍受不了这噪音了。"
+    },
+    {
+     "en": "This tree bears many apples every year.",
+     "zh": "这棵树每年结很多苹果。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "learning",
+    "due_date": "2026-08-16",
+    "interval": 1,
+    "ease": 2.6,
+    "reps": 1,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "carnivorous",
+   "lemma": "carnivorous",
+   "phonetic": "/kɑ:'nivәrәs/",
+   "pos": "",
+   "definition": "a. 食肉的; [医] 食肉的",
+   "definition_en": "relating to or characteristic of carnivores · (used of plants as well as animals) feeding on animals",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:26:56",
+   "examples": [
+    {
+     "en": "Lions are carnivorous animals that hunt for meat.",
+     "zh": "狮子是食肉动物，以捕猎为生。"
+    },
+    {
+     "en": "The carnivorous plant traps insects with its leaves.",
+     "zh": "这种食肉植物用叶子捕捉昆虫。"
+    },
+    {
+     "en": "My dog is carnivorous and loves eating beef.",
+     "zh": "我的狗是食肉动物，喜欢吃牛肉。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "omnivorous",
+   "lemma": "omnivorous",
+   "phonetic": "/ɒm'nivәrәs/",
+   "pos": "",
+   "definition": "a. 无所不吃的, 杂食的, 什么都喜欢的",
+   "definition_en": "feeding on both plants and animals",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:26:58",
+   "examples": [
+    {
+     "en": "Raccoons are omnivorous and eat almost anything.",
+     "zh": "浣熊是杂食动物，几乎什么都吃。"
+    },
+    {
+     "en": "She has an omnivorous appetite for books and movies.",
+     "zh": "她对书籍和电影有着广泛的兴趣。"
+    },
+    {
+     "en": "As an omnivorous reader, he enjoys both novels and science.",
+     "zh": "作为一位博览群书的读者，他既喜欢小说也喜欢科学。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "mammal",
+   "lemma": "mammal",
+   "phonetic": "/mæmәl/",
+   "pos": "",
+   "definition": "n. 哺乳动物; [化] 哺乳动物",
+   "definition_en": "any warm-blooded vertebrate having the skin more or less covered with hair; young are born alive except for the small subclass of monotremes and nourished with milk",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:27:01",
+   "examples": [
+    {
+     "en": "A whale is a mammal, not a fish.",
+     "zh": "鲸鱼是哺乳动物，不是鱼。"
+    },
+    {
+     "en": "Humans are mammals, too.",
+     "zh": "人类也是哺乳动物。"
+    },
+    {
+     "en": "This mammal lives in the ocean.",
+     "zh": "这种哺乳动物生活在海洋里。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "shaggy",
+   "lemma": "shaggy",
+   "phonetic": "/'ʃægi/",
+   "pos": "",
+   "definition": "a. 毛发蓬乱的, 粗浓的, 草木丛生的",
+   "definition_en": "used of hair; thick and poorly groomed · having a very rough nap or covered with hanging shags",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:27:04",
+   "examples": [
+    {
+     "en": "The shaggy dog shook water everywhere.",
+     "zh": "那只毛茸茸的狗甩得到处是水。"
+    },
+    {
+     "en": "My shaggy hair needs a comb.",
+     "zh": "我蓬乱的头发需要梳一梳。"
+    },
+    {
+     "en": "We walked through shaggy grass.",
+     "zh": "我们穿过杂草丛生的草地。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "vertebrate",
+   "lemma": "vertebrate",
+   "phonetic": "/'vә:tibreit/",
+   "pos": "",
+   "definition": "n. 脊椎动物; a. 有椎骨的, 有脊椎的",
+   "definition_en": "animals having a bony or cartilaginous skeleton with a segmented spinal column and a large brain enclosed in a skull or cranium",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:29:27",
+   "examples": [
+    {
+     "en": "Humans are vertebrates.",
+     "zh": "人类是脊椎动物。"
+    },
+    {
+     "en": "A vertebrate animal has a backbone.",
+     "zh": "脊椎动物有脊骨。"
+    },
+    {
+     "en": "Fish are the oldest vertebrates.",
+     "zh": "鱼是最古老的脊椎动物。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "raccoon",
+   "lemma": "raccoon",
+   "phonetic": "/ræ'ku:n/",
+   "pos": "",
+   "definition": "n. 浣熊, 浣熊毛皮",
+   "definition_en": "the fur of the North American racoon · an omnivorous nocturnal mammal native to North America and Central America",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:30:25",
+   "examples": [
+    {
+     "en": "A raccoon stole my sandwich last night.",
+     "zh": "一只浣熊昨晚偷了我的三明治。"
+    },
+    {
+     "en": "She wore a coat made of raccoon fur.",
+     "zh": "她穿了一件浣熊毛皮大衣。"
+    },
+    {
+     "en": "The raccoon rummaged through the trash can.",
+     "zh": "浣熊在垃圾桶里翻找食物。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "appetite",
+   "lemma": "appetite",
+   "phonetic": "/'æpitait/",
+   "pos": "",
+   "definition": "n. 食欲, 欲望, 爱好; [医] 食欲",
+   "definition_en": "a feeling of craving something",
+   "study_count": 3,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:30:50",
+   "examples": [
+    {
+     "en": "I have no appetite for dinner tonight.",
+     "zh": "今晚我没胃口吃饭。"
+    },
+    {
+     "en": "He has an appetite for adventure.",
+     "zh": "他对冒险有强烈的欲望。"
+    },
+    {
+     "en": "Her appetite for books is endless.",
+     "zh": "她对书籍的爱好无止境。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "rummage",
+   "lemma": "rummage",
+   "phonetic": "/'rʌmidʒ/",
+   "pos": "",
+   "definition": "v. 仔细翻寻, 仔细搜查, 检查出; n. 仔细翻找, 查出的物件",
+   "definition_en": "search haphazardly",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:52:38",
+   "examples": [
+    {
+     "en": "She rummaged through her bag for keys.",
+     "zh": "她翻遍了包找钥匙。"
+    },
+    {
+     "en": "He rummaged around in the drawer.",
+     "zh": "他在抽屉里到处翻找。"
+    },
+    {
+     "en": "After a quick rummage, she found the ticket.",
+     "zh": "快速翻找后，她找到了票。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "marginal",
+   "lemma": "marginal",
+   "phonetic": "/'mɑ:dʒinәl/",
+   "pos": "",
+   "definition": "a. 边缘的, 最低限度的, 有旁注的; [医] 缘的",
+   "definition_en": "producing at a rate that barely covers production costs",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:52:39",
+   "examples": [
+    {
+     "en": "The marginal cost of production is very low.",
+     "zh": "生产的边际成本非常低。"
+    },
+    {
+     "en": "There was only a marginal improvement in sales.",
+     "zh": "销售额只有微小的改善。"
+    },
+    {
+     "en": "She wrote marginal notes in the textbook.",
+     "zh": "她在课本上写了旁注。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "haphazardly",
+   "lemma": "haphazardly",
+   "phonetic": "/.hæp'hæzәdli/",
+   "pos": "",
+   "definition": "adv. 偶然地, 随意地；杂乱地",
+   "definition_en": "in a random manner · without care; in a slapdash manner",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:52:50",
+   "examples": [
+    {
+     "en": "He threw his clothes haphazardly into the suitcase.",
+     "zh": "他把衣服随手乱扔进行李箱。"
+    },
+    {
+     "en": "The books were arranged haphazardly on the shelf.",
+     "zh": "书架上的书排列得杂乱无章。"
+    },
+    {
+     "en": "She haphazardly picked a restaurant for dinner.",
+     "zh": "她随便挑了一家餐厅吃晚饭。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "cabinet",
+   "lemma": "cabinet",
+   "phonetic": "/ˈkæbɪnət/",
+   "pos": "n.",
+   "definition": "内阁；橱柜",
+   "definition_en": "a piece of furniture resembling a cupboard with doors and shelves and drawers; for storage or display · persons appointed by a head of state to head executive departments of government and act as official advisers",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:54:31",
+   "examples": [
+    {
+     "en": "The cabinet approved the new policy.",
+     "zh": "内阁批准了新政策。"
+    },
+    {
+     "en": "I keep my tea in the cabinet.",
+     "zh": "我把茶叶放在橱柜里。"
+    },
+    {
+     "en": "She found the key in the file cabinet.",
+     "zh": "她在文件柜里找到了钥匙。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "guardian",
+   "lemma": "guardian",
+   "phonetic": "/'gɑ:diәn/",
+   "pos": "",
+   "definition": "n. 看守者, 监护人, 保护人; a. 保护的",
+   "definition_en": "a person who cares for persons or property",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:58:38",
+   "examples": [
+    {
+     "en": "My legal guardian signed the permission slip.",
+     "zh": "我的法定监护人签署了许可单。"
+    },
+    {
+     "en": "The old lighthouse is a guardian for sailors.",
+     "zh": "这座旧灯塔是水手的守护者。"
+    },
+    {
+     "en": "She prayed to her guardian angel.",
+     "zh": "她向守护天使祈祷。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "lighthouse",
+   "lemma": "lighthouse",
+   "phonetic": "/'laithaus/",
+   "pos": "",
+   "definition": "n. 灯塔",
+   "definition_en": "a tower with a light that gives warning of shoals to passing ships",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:59:51",
+   "examples": [
+    {
+     "en": "The lighthouse warns ships of the rocks.",
+     "zh": "灯塔警示船只注意礁石。"
+    },
+    {
+     "en": "Her advice was a lighthouse in my confusion.",
+     "zh": "她的建议是我迷茫时的灯塔。"
+    },
+    {
+     "en": "We climbed to the top of the lighthouse.",
+     "zh": "我们爬到了灯塔顶部。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "shoal",
+   "lemma": "shoal",
+   "phonetic": "/ʃәul/",
+   "pos": "",
+   "definition": "n. 浅水, 浅滩, 沙洲, 鱼群, 暗礁, 潜在危险; a. 浅的; vi. 鱼成群而游, 变浅; vt. 使变浅",
+   "definition_en": "a sandbank in a stretch of water that is visible at low tide · a stretch of shallow water",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-15 23:59:59",
+   "examples": [
+    {
+     "en": "A shoal of tiny fish swam near the shore.",
+     "zh": "一大群小鱼在岸边游过。"
+    },
+    {
+     "en": "Our boat hit a shoal and stopped suddenly.",
+     "zh": "我们的船撞上了沙洲，突然停了下来。"
+    },
+    {
+     "en": "The channel is full of shoals, so sail slowly.",
+     "zh": "这条航道暗礁密布，所以要慢速航行。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "bundle",
+   "lemma": "bundle",
+   "phonetic": "/'bʌndl/",
+   "pos": "",
+   "definition": "n. 捆, 束; vt. 包扎, 胡乱塞进; vi. 匆忙离开",
+   "definition_en": "a package of several things tied together for carrying or storing",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:02:53",
+   "examples": [
+    {
+     "en": "She bought a bundle of flowers.",
+     "zh": "她买了一束花。"
+    },
+    {
+     "en": "He bundled his clothes into a bag.",
+     "zh": "他把衣服胡乱塞进包里。"
+    },
+    {
+     "en": "They bundled up and went out.",
+     "zh": "他们裹得严严实实然后出门了。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "benign",
+   "lemma": "benign",
+   "phonetic": "/bi'nain/",
+   "pos": "",
+   "definition": "a. 善良的, 良性的; [医] 良性的",
+   "definition_en": "not dangerous to health; not recurrent or progressive (especially of a tumor) · pleasant and beneficial in nature or influence",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:07:52",
+   "examples": [
+    {
+     "en": "She has a benign smile.",
+     "zh": "她有着和善的微笑。"
+    },
+    {
+     "en": "The tumor is benign, so don't worry.",
+     "zh": "肿瘤是良性的，所以别担心。"
+    },
+    {
+     "en": "The climate here is benign and mild.",
+     "zh": "这里的气候温和宜人。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "humanoid",
+   "lemma": "humanoid",
+   "phonetic": "/'hju:mәnɒid/",
+   "pos": "",
+   "definition": "a. 类人的",
+   "definition_en": "an automaton that resembles a human being",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:08:31",
+   "examples": [
+    {
+     "en": "The humanoid robot waved at us.",
+     "zh": "那个类人机器人向我们挥手。"
+    },
+    {
+     "en": "The statue had a humanoid form.",
+     "zh": "那座雕像具有类人的形态。"
+    },
+    {
+     "en": "Some aliens are described as humanoid.",
+     "zh": "有些外星人被描述为类人形。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "acquisition",
+   "lemma": "acquisition",
+   "phonetic": "/.ækwi'ziʃәn/",
+   "pos": "",
+   "definition": "n. 获得, 获得物; [经] 收购, 招揽, 取得",
+   "definition_en": "the act of contracting or assuming or acquiring possession of something · something acquired",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:12:30",
+   "examples": [
+    {
+     "en": "The company announced the acquisition of a small startup.",
+     "zh": "公司宣布收购一家小型初创企业。"
+    },
+    {
+     "en": "Her latest acquisition is a rare painting.",
+     "zh": "她最近获得的东西是一幅稀有画作。"
+    },
+    {
+     "en": "Language acquisition takes time and practice.",
+     "zh": "语言习得需要时间和练习。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "fleet",
+   "lemma": "fleet",
+   "phonetic": "/fli:t/",
+   "pos": "",
+   "definition": "n. 舰队, 港湾, 小河; a. 快速的, 敏捷的, 浅的, 短暂的; adv. 浅; vi. 疾驰, 飞逝, 掠过; vt. 消磨, 变换船(或船员)的位置",
+   "definition_en": "group of aircraft operating together under the same ownership · group of motor vehicles operating together under the same ownership",
+   "study_count": 2,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:12:53",
+   "examples": [
+    {
+     "en": "The fishing fleet is stuck in the harbor.",
+     "zh": "渔船队被困在港口。"
+    },
+    {
+     "en": "The company has a fleet of rental cars.",
+     "zh": "公司有一支租赁车队。"
+    },
+    {
+     "en": "The horse is fleet and strong.",
+     "zh": "这匹马敏捷而强壮。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "lawsuit",
+   "lemma": "lawsuit",
+   "phonetic": "/'lɒ:sju:t/",
+   "pos": "",
+   "definition": "n. 诉讼; [法] 诉讼, 诉讼案件",
+   "definition_en": "a comprehensive term for any proceeding in a court of law whereby an individual seeks a legal remedy",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:13:29",
+   "examples": [
+    {
+     "en": "She filed a lawsuit against the company.",
+     "zh": "她对那家公司提起了诉讼。"
+    },
+    {
+     "en": "The lawsuit cost them a lot of money.",
+     "zh": "这场诉讼花了他们很多钱。"
+    },
+    {
+     "en": "He won the lawsuit and got compensation.",
+     "zh": "他打赢了官司，获得了赔偿。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "turbine",
+   "lemma": "turbine",
+   "phonetic": "/'tә:bain/",
+   "pos": "",
+   "definition": "n. 涡轮机; [化] 涡轮机",
+   "definition_en": "rotary engine in which the kinetic energy of a moving fluid is converted into mechanical energy by causing a bladed rotor to rotate",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:13:42",
+   "examples": [
+    {
+     "en": "The wind turbine spins quickly on the hill.",
+     "zh": "风车在山上快速旋转。"
+    },
+    {
+     "en": "Steam powers the turbine to generate electricity.",
+     "zh": "蒸汽驱动涡轮机发电。"
+    },
+    {
+     "en": "A broken turbine caused the factory shutdown.",
+     "zh": "一台涡轮机损坏导致工厂停工。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "dismiss",
+   "lemma": "dismiss",
+   "phonetic": "/dis'mis/",
+   "pos": "",
+   "definition": "vt. 解散, 开除, 解职; vi. 解散; [计] 解散",
+   "definition_en": "bar from attention or consideration · cease to consider; put out of judicial consideration",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:15:41",
+   "examples": [
+    {
+     "en": "The teacher dismissed the class early.",
+     "zh": "老师提前解散了班级。"
+    },
+    {
+     "en": "The boss dismissed him for being late.",
+     "zh": "老板因为他迟到而开除他。"
+    },
+    {
+     "en": "She dismissed the idea as nonsense.",
+     "zh": "她认为这个想法是胡说八道而不予理会。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "wire",
+   "lemma": "wire",
+   "phonetic": "/'waiә/",
+   "pos": "",
+   "definition": "n. 电线, 电报, 电信, 铁丝网, 金属丝; vt. 用金属丝捆扎, 拍电报; vi. 打电报",
+   "definition_en": "ligament made of metal and used to fasten things or make cages or fences etc · a metal conductor that carries electricity over a distance",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:18:06",
+   "examples": [
+    {
+     "en": "Don't touch that wire, it's dangerous.",
+     "zh": "别碰那根电线，很危险。"
+    },
+    {
+     "en": "I'll wire you the money tomorrow.",
+     "zh": "我明天把钱电汇给你。"
+    },
+    {
+     "en": "The fence is made of wire.",
+     "zh": "这栅栏是铁丝做的。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "cybersecurity",
+   "lemma": "cybersecurity",
+   "phonetic": "/ˌsaɪbərsɪˈkjʊrəti/",
+   "pos": "n.",
+   "definition": "网络安全；网络安保",
+   "definition_en": null,
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:18:54",
+   "examples": [
+    {
+     "en": "Cybersecurity is important for everyone.",
+     "zh": "网络安全对每个人都很重要。"
+    },
+    {
+     "en": "She works in cybersecurity.",
+     "zh": "她从事网络安全工作。"
+    },
+    {
+     "en": "Good cybersecurity protects your data.",
+     "zh": "良好的网络安全保护你的数据。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "manifesto",
+   "lemma": "manifesto",
+   "phonetic": "/.mæni'festәu/",
+   "pos": "",
+   "definition": "n. 宣言, 声明",
+   "definition_en": "a public declaration of intentions (as issued by a political party or government)",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:19:05",
+   "examples": [
+    {
+     "en": "The party published its election manifesto yesterday.",
+     "zh": "该党昨天发布了竞选宣言。"
+    },
+    {
+     "en": "She signed the environmental manifesto.",
+     "zh": "她签署了环保宣言。"
+    },
+    {
+     "en": "His book reads like a personal manifesto.",
+     "zh": "他的书读起来像一份个人宣言。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "console",
+   "lemma": "console",
+   "phonetic": "/kәn'sәul/",
+   "pos": "",
+   "definition": "vt. 安慰, 藉慰; n. 控制台; [计] 控制台",
+   "definition_en": "a scientific instrument consisting of displays and an input device that an operator can use to monitor and control a system (especially a computer system) · an ornamental scroll-shaped bracket (especially one used to support a wall fixture)",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 00:19:31",
+   "examples": [
+    {
+     "en": "She tried to console him after his loss.",
+     "zh": "他失利后，她试图安慰他。"
+    },
+    {
+     "en": "He bought a new console for gaming.",
+     "zh": "他买了一个新的游戏机。"
+    },
+    {
+     "en": "The console displays system information.",
+     "zh": "控制台显示系统信息。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-15",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "mild",
+   "lemma": "mild",
+   "phonetic": "/maild/",
+   "pos": "",
+   "definition": "a. 温和的, 温柔的, 淡味的, 适度的, 轻微的, (肥皂等)软性的; [医] 轻的, 缓和的",
+   "definition_en": "moderate in type or degree or effect or force; far from extreme",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 08:47:39",
+   "examples": [
+    {
+     "en": "The weather is mild today.",
+     "zh": "今天天气温和。"
+    },
+    {
+     "en": "I like mild cheese.",
+     "zh": "我喜欢口味清淡的奶酪。"
+    },
+    {
+     "en": "He has a mild fever.",
+     "zh": "他有点轻微发烧。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-16",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "fusion",
+   "lemma": "fusion",
+   "phonetic": "/'fju:ʒәn/",
+   "pos": "",
+   "definition": "n. 熔合物, 结合, 熔合; [化] 熔融; 熔化; 聚变",
+   "definition_en": "an occurrence that involves the production of a union · the merging of adjacent sounds or syllables or words",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 08:52:27",
+   "examples": [
+    {
+     "en": "The dish is a fusion of Chinese and Italian cuisine.",
+     "zh": "这道菜是中意烹饪的融合。"
+    },
+    {
+     "en": "The fusion of the metals requires high heat.",
+     "zh": "金属的熔合需要高温。"
+    },
+    {
+     "en": "Nuclear fusion powers the sun.",
+     "zh": "核聚变为太阳提供能量。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-16",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "cuisine",
+   "lemma": "cuisine",
+   "phonetic": "/kwi:'zi:n/",
+   "pos": "",
+   "definition": "n. 烹调风格, 烹调法, 烹饪, 厨房",
+   "definition_en": "the practice or manner of preparing food or the food so prepared",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 08:55:16",
+   "examples": [
+    {
+     "en": "I love Italian cuisine, especially pasta.",
+     "zh": "我爱意大利菜，尤其是意面。"
+    },
+    {
+     "en": "The restaurant serves authentic Sichuan cuisine.",
+     "zh": "这家餐厅提供正宗的川菜。"
+    },
+    {
+     "en": "She studied French cuisine in Paris.",
+     "zh": "她在巴黎学过法国烹饪。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-16",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "pasta",
+   "lemma": "pasta",
+   "phonetic": "/'pæstә/",
+   "pos": "",
+   "definition": "n. 意大利面食; [医] 糊剂, 泥膏剂",
+   "definition_en": "a dish that contains pasta as its main ingredient · shaped and dried dough made from flour and water and sometimes egg",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 08:55:51",
+   "examples": [
+    {
+     "en": "I cooked pasta for dinner tonight.",
+     "zh": "我今晚煮了意大利面当晚餐。"
+    },
+    {
+     "en": "She prefers fresh pasta over dried.",
+     "zh": "她更喜欢新鲜意大利面而非干面。"
+    },
+    {
+     "en": "This pasta sauce tastes really good.",
+     "zh": "这种意大利面酱味道真好。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-16",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "recurrent",
+   "lemma": "recurrent",
+   "phonetic": "/ri'kʌrәnt/",
+   "pos": "",
+   "definition": "a. 再发生的, 定期重复的, 循环的; [医] 复发的, 再发的, 回归的",
+   "definition_en": "recurring again and again",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 08:56:51",
+   "examples": [
+    {
+     "en": "She had a recurrent dream about flying.",
+     "zh": "她反复做飞翔的梦。"
+    },
+    {
+     "en": "The recurrent problem is lack of funding.",
+     "zh": "反复出现的问题是资金短缺。"
+    },
+    {
+     "en": "His recurrent back pain bothers him a lot.",
+     "zh": "他反复发作的背痛很困扰他。"
+    }
+   ],
+   "contexts": [],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-16",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "stipulate",
+   "lemma": "stipulate",
+   "phonetic": "/'stipjuleit/",
+   "pos": "",
+   "definition": "v. 规定, 保证",
+   "definition_en": "specify as a condition or requirement in a contract or agreement; make an express demand or provision in an agreement · give a guarantee or promise of",
+   "study_count": 1,
+   "encounter_count": 2,
+   "created_at": "2026-08-16 09:26:39",
+   "examples": [
+    {
+     "en": "The contract stipulates that payment is due in 30 days.",
+     "zh": "合同规定付款应在30天内完成。"
+    },
+    {
+     "en": "She stipulated for a flexible work schedule.",
+     "zh": "她要求灵活的工作时间安排。"
+    },
+    {
+     "en": "The rules stipulate no phones in the meeting.",
+     "zh": "规定要求会议中不得使用手机。"
+    }
+   ],
+   "contexts": [
+    {
+     "sentence": "The contract stipulates a strict deadline for delivery.",
+     "meaning": null,
+     "source": "剪贴板"
+    }
+   ],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-16",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "pivot",
+   "lemma": "pivot",
+   "phonetic": "/ˈpɪvət/",
+   "pos": "v.",
+   "definition": "转身；调整方向；改变策略",
+   "definition_en": "the person in a rank around whom the others wheel and maneuver · axis consisting of a short shaft that supports something that turns",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 09:34:50",
+   "examples": [
+    {
+     "en": "He pivoted on his heel and left.",
+     "zh": "他转身就走了。"
+    },
+    {
+     "en": "The company pivoted to online sales.",
+     "zh": "公司转向了线上销售。"
+    },
+    {
+     "en": "She quickly pivoted to a new plan.",
+     "zh": "她迅速调整到新计划。"
+    }
+   ],
+   "contexts": [
+    {
+     "sentence": "The startup pivoted after burning through its runway.",
+     "meaning": "指公司转变了业务方向或策略",
+     "source": "剪贴板"
+    }
+   ],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-16",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  },
+  {
+   "word": "runway",
+   "lemma": "runway",
+   "phonetic": "/ˈrʌnˌweɪ/",
+   "pos": "n.",
+   "definition": "跑道；（比喻）可用资金或持续运营时间",
+   "definition_en": "a chute down which logs can slide · a narrow platform extending from the stage into the audience in a theater or nightclub etc.",
+   "study_count": 1,
+   "encounter_count": 1,
+   "created_at": "2026-08-16 09:34:50",
+   "examples": [
+    {
+     "en": "The plane is waiting on the runway for takeoff.",
+     "zh": "飞机在跑道上等待起飞。"
+    },
+    {
+     "en": "The model walked confidently down the runway.",
+     "zh": "模特自信地走在T台上。"
+    },
+    {
+     "en": "We have enough runway to finish the project.",
+     "zh": "我们有足够的时间完成这个项目。"
+    }
+   ],
+   "contexts": [
+    {
+     "sentence": "The startup pivoted after burning through its runway.",
+     "meaning": "指公司能维持运营的资金或时间，本句中表示烧完资金之前的时间",
+     "source": "剪贴板"
+    }
+   ],
+   "review": {
+    "status": "new",
+    "due_date": "2026-08-16",
+    "interval": 0,
+    "ease": 2.5,
+    "reps": 0,
+    "lapses": 0
+   }
+  }
+ ]
+}
