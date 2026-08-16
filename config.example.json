@@ -1,0 +1,8 @@
+{
+  "api_key": "",
+  "model": "deepseek-v4-flash",
+  "level": "中文母语、六级左右水平的英语学习者",
+  "news_hour": 6,
+  "news_count": 10,
+  "daily_new": 20
+}

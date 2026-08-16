@@ -1,0 +1,212 @@
+<title>Vocab</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{
+  --paper:#f5f3ee; --card:#fffefb; --ink:#1b1c1a; --dim:#6f7269;
+  --rule:#e0dcd2; --accent:#2f6f4f; --amber:#a97c18; --shadow:0 1px 2px rgba(30,28,22,.06);
+  --serif:"Iowan Old Style","Charter","Palatino",Georgia,"Songti SC",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#15171a; --card:#1d2024; --ink:#e7e5e0; --dim:#8b8e93;
+    --rule:#2c3036; --accent:#6cbf8f; --amber:#d3a54c; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15171a; --card:#1d2024; --ink:#e7e5e0; --dim:#8b8e93;
+  --rule:#2c3036; --accent:#6cbf8f; --amber:#d3a54c; --shadow:none;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.7 var(--sans);-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto;padding:64px 22px 96px;display:flex;
+  flex-direction:column;gap:56px}
+
+/* ---------- 页眉 ---------- */
+header{display:flex;flex-direction:column;gap:18px}
+.mark{display:flex;align-items:baseline;gap:14px}
+.mark b{font:600 40px/1 var(--mono);letter-spacing:-.02em;color:var(--accent)}
+.mark span{font:500 15px/1 var(--sans);color:var(--dim);letter-spacing:.14em;
+  text-transform:uppercase}
+h1{font:400 31px/1.32 var(--serif);margin:0;text-wrap:balance;letter-spacing:-.01em}
+.lede{font-size:16.5px;color:var(--dim);margin:0;max-width:60ch}
+
+/* ---------- 通用 ---------- */
+h2{font:600 13px/1 var(--sans);letter-spacing:.15em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 20px}
+section{display:flex;flex-direction:column}
+p{margin:0 0 14px;max-width:66ch}
+p:last-child{margin-bottom:0}
+a{color:var(--accent);text-underline-offset:3px}
+code{font:13.5px/1.5 var(--mono);background:var(--card);border:1px solid var(--rule);
+  border-radius:5px;padding:1px 5px}
+
+/* ---------- 样例卡片 ---------- */
+.spec{background:var(--card);border:1px solid var(--rule);border-radius:12px;
+  box-shadow:var(--shadow);overflow:hidden}
+.entry{display:flex;gap:0}
+.entry .l{flex:0 0 40%;padding:15px 17px;min-width:0}
+.entry .r{flex:1;padding:15px 17px;border-left:1px solid var(--rule);min-width:0}
+.hw{display:flex;align-items:baseline;gap:9px}
+.hw b{font:600 20px/1.3 var(--serif)}
+.hw i{font:normal 12.5px/1 var(--mono);color:var(--dim);font-style:normal}
+.hw .st{margin-left:auto;color:var(--amber);font-size:13px;letter-spacing:1px}
+.gloss{font-size:13.5px;color:var(--dim);margin-top:4px;line-height:1.55}
+.ex{font-size:14px;line-height:1.62;margin:0 0 5px}
+.ex:last-child{margin:0}
+.tip{display:inline-block;background:var(--ink);color:var(--paper);
+  border-radius:8px;padding:7px 11px;font-size:13px;line-height:1.5;
+  box-shadow:0 5px 18px rgba(20,18,14,.2)}
+.tip b{font-weight:600}
+.tip i{font-style:normal;opacity:.6;font-size:11.5px;font-family:var(--mono)}
+.capt{font-size:12.5px;color:var(--dim);margin:9px 2px 0}
+
+/* ---------- 流程 ---------- */
+ol.flow{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;
+  counter-reset:s}
+ol.flow li{counter-increment:s;display:grid;grid-template-columns:26px 1fr;
+  gap:14px;padding:13px 0;border-top:1px solid var(--rule)}
+ol.flow li:first-child{border-top:none;padding-top:0}
+ol.flow li::before{content:counter(s);font:500 12px/22px var(--mono);color:var(--dim);
+  text-align:center;border:1px solid var(--rule);border-radius:50%;height:24px}
+ol.flow h3{font:600 15px/1.5 var(--sans);margin:0 0 2px}
+ol.flow p{font-size:14.5px;color:var(--dim);margin:0}
+
+/* ---------- 面板 ---------- */
+.panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:11px;
+  padding:15px 16px;box-shadow:var(--shadow)}
+.panel h3{font:600 14.5px/1.4 var(--sans);margin:0 0 5px}
+.panel h3 em{font-style:normal;color:var(--dim);font-weight:400;font-size:12px;
+  font-family:var(--mono);margin-left:6px}
+.panel p{font-size:13.5px;color:var(--dim);margin:0;line-height:1.6}
+
+/* ---------- 事实表 ---------- */
+dl.facts{margin:0;display:grid;grid-template-columns:auto 1fr;gap:9px 20px;
+  font-size:14.5px}
+dl.facts dt{color:var(--dim)}
+dl.facts dd{margin:0;font-variant-numeric:tabular-nums}
+
+/* ---------- 命令 ---------- */
+pre{margin:0;background:var(--card);border:1px solid var(--rule);border-radius:10px;
+  padding:14px 16px;overflow-x:auto;font:13.5px/1.85 var(--mono);box-shadow:var(--shadow)}
+pre .c{color:var(--dim)}
+
+footer{border-top:1px solid var(--rule);padding-top:22px;font-size:13.5px;color:var(--dim)}
+@media (max-width:620px){
+  .wrap{padding:44px 18px 72px;gap:44px}
+  .entry{flex-direction:column}
+  .entry .r{border-left:none;border-top:1px solid var(--rule)}
+  .entry .l{flex:none}
+}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="mark"><b>v</b><span>本地生词本</span></div>
+  <h1>把读到的英文，变成第二天要复习的单词。</h1>
+  <p class="lede">复制一句英文，它自己挑出生词、查好释义、排进复习队列。释义来自本机的
+    40 万条离线词典，不联网也不花钱。每天早上再送来 10 篇科技商业新闻，读着读着词就攒起来了。</p>
+</header>
+
+<section>
+  <h2>一个词长这样</h2>
+  <div class="spec entry">
+    <div class="l">
+      <div class="hw"><b>mitigate</b><i>/ˈmɪtɪgeɪt/</i><span class="st">★★★</span></div>
+      <div class="gloss">make less severe or harsh</div>
+    </div>
+    <div class="r">
+      <p class="ex">We need to mitigate the downside risk.</p>
+      <p class="ex">The company mitigated the damage quickly.</p>
+      <p class="ex">Planting trees mitigates urban heat.</p>
+    </div>
+  </div>
+  <p class="capt">左边是词，右边是三个例句。中文一律藏起来 —— 鼠标停上去才浮出来，
+    逼自己先用英文理解。星星记录背过几次。</p>
+  <p style="margin-top:18px"><span class="tip"><b>mitigate</b> <i>/ˈmɪtɪgeɪt/</i><br>vt. 减轻，缓和</span></p>
+  <p class="capt">阅读时鼠标停在任意单词上，本机词典即刻给出中文，不打断阅读。</p>
+</section>
+
+<section>
+  <h2>复制一句话之后发生了什么</h2>
+  <ol class="flow">
+    <li>
+      <div><h3>护栏先拦一道</h3>
+      <p>超长文本、中文、链接、代码、以及任何像密码或密钥的内容，直接忽略，绝不入库。</p></div>
+    </li>
+    <li>
+      <div><h3>词频表筛掉认识的</h3>
+      <p>近万条词频排名，常见词剔除；已掌握的、以及你手动删过的词也跳过。</p></div>
+    </li>
+    <li>
+      <div><h3>老朋友直接 +1</h3>
+      <p>已经收过的词只增加遇见次数并顶到列表最前，不重复建条目，一次调用都不花。</p></div>
+    </li>
+    <li>
+      <div><h3>剩下的查离线词典</h3>
+      <p>释义、音标、词性、词形还原全部本地完成。<code>bearings</code> 会归到 <code>bear</code>。</p></div>
+    </li>
+    <li>
+      <div><h3>排进复习队列</h3>
+      <p>间隔重复：答对一次隔 1 天，然后 3、8、22、64 天，到 60 天自动毕业，不再打扰。</p></div>
+    </li>
+  </ol>
+</section>
+
+<section>
+  <h2>三个界面</h2>
+  <div class="panels">
+    <div class="panel">
+      <h3>Words <em>/</em></h3>
+      <p>全部生词，按日期分组，每页 100 个。输入框打字即筛选，回车即添加。</p>
+    </div>
+    <div class="panel">
+      <h3>News <em>每天 6:00</em></h3>
+      <p>五家科技商业媒体轮流取 10 篇。AI 重写成 130 词英文摘要，不看原文也知道讲了什么。</p>
+    </div>
+    <div class="panel">
+      <h3>Review <em>1 / 2 / 3</em></h3>
+      <p>翻面卡片，例句里的目标词挖空。忘了 / 模糊 / 会了，三档评分。</p>
+    </div>
+  </div>
+  <p class="capt">页面上不出现中文，为的是逼出英文思维。任何单词双击即收藏。</p>
+</section>
+
+<section>
+  <h2>数据都在你自己机器上</h2>
+  <dl class="facts">
+    <dt>词库</dt><dd><code>~/.vocab/vocab.db</code> — 单文件，拷走即备份</dd>
+    <dt>离线词典</dt><dd>401,258 条（ECDICT），44 MB，一次导入</dd>
+    <dt>词频表</dt><dd>9,894 条，用来判断哪些词你肯定认识</dd>
+    <dt>依赖</dt><dd>单文件 Python，只用标准库，无需 pip install</dd>
+    <dt>联网</dt><dd>只有抓新闻和写例句才联网；不配密钥也能完整使用</dd>
+  </dl>
+</section>
+
+<section>
+  <h2>装起来</h2>
+  <pre><span class="c"># 拿到代码</span>
+git clone git@github.com:USER/vocab.git ~/.vocab
+ln -s ~/.vocab/vocab.py ~/.local/bin/v && chmod +x ~/.vocab/vocab.py
+
+<span class="c"># 导入离线词典（ecdict.csv 来自 skywind3000/ECDICT）</span>
+v dict import ecdict.csv
+
+<span class="c"># 起服务：网页 + 剪贴板守护</span>
+v serve --open
+v watch</pre>
+  <p class="capt">macOS 上可以把两个进程交给 launchd，开机自动运行，此后只用打开网页。</p>
+</section>
+
+<footer>
+  自用工具，写给一个想靠读英文资讯来记单词的人。<br>
+  离线词典 ECDICT 与词频表均来自公开数据源，新闻只保存标题与自动生成的摘要，正文回原站阅读。
+</footer>
+
+</div>
