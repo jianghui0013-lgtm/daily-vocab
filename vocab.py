@@ -2060,6 +2060,20 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
 .stat span{font-size:11px;color:var(--dim)}
 .empty{text-align:center;color:var(--dim);padding:60px 20px;font-size:15px}
 .count{font-size:12px;color:var(--dim);margin:10px 2px 8px}
+#all{position:relative}
+#sug{position:absolute;left:0;right:0;z-index:40;background:var(--card);
+  border:1px solid var(--line);border-radius:11px;margin-top:-4px;overflow:hidden;
+  box-shadow:0 8px 26px rgba(0,0,0,.16);display:none}
+#sug.show{display:block}
+.sgi{padding:9px 14px;cursor:pointer;display:flex;align-items:baseline;gap:9px;
+  border-top:1px solid var(--line);font-size:14px}
+.sgi:first-child{border-top:none}
+.sgi.on,.sgi:hover{background:var(--bg)}
+.sgi b{font-weight:600;flex:none}
+.sgi i{font-style:normal;color:var(--dim);font-size:12.5px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.sgs{font-size:10.5px;color:var(--accent);border:1px solid var(--accent);
+  border-radius:5px;padding:0 4px;flex:none}
 .pager{display:flex;gap:5px;justify-content:center;margin:18px 0 4px;flex-wrap:wrap}
 .pg{min-width:32px;padding:6px 9px;border-radius:8px;border:1px solid var(--line);
   background:var(--card);color:var(--fg);font-size:13px;cursor:pointer;font-family:inherit}
@@ -2262,6 +2276,75 @@ function pagerHTML(){
   return h+`</div>`;
 }
 
+// ---------- 输入联想
+let sugItems = [], sugIdx = -1, pendingRisky = "";
+
+function sugEl(){
+  let el = $("#sug");
+  if(!el){
+    el = document.createElement("div"); el.id = "sug";
+    $("#q").parentNode.insertBefore(el, $("#q").nextSibling);
+  }
+  return el;
+}
+function hideSug(){ const el = $("#sug"); if(el) el.classList.remove("show"); sugIdx = -1; }
+
+async function suggest(q){
+  if(!q || q.length < 2) return hideSug();
+  const r = await api("/api/suggest?q=" + encodeURIComponent(q));
+  sugItems = (r && r.items) || [];
+  if(!sugItems.length) return hideSug();
+  const el = sugEl();
+  el.innerHTML = sugItems.map((it,i)=>
+    `<div class="sgi${i===sugIdx?" on":""}" data-i="${i}" onmousedown="pickSug(${i})">
+       <b>${esc(it.word)}</b>${it.saved?`<span class="sgs">saved</span>`:""}
+       <i>${esc(it.zh)}</i></div>`).join("");
+  el.classList.add("show");
+}
+function moveSug(d){
+  if(!sugItems.length) return;
+  sugIdx = (sugIdx + d + sugItems.length + 1) % (sugItems.length + 1) - (d<0&&sugIdx<0?0:0);
+  if(sugIdx > sugItems.length - 1) sugIdx = -1;
+  if(sugIdx < -1) sugIdx = sugItems.length - 1;
+  const el = $("#sug");
+  if(el) el.querySelectorAll(".sgi").forEach((x,i)=>x.classList.toggle("on", i===sugIdx));
+  if(sugIdx >= 0) $("#q").value = sugItems[sugIdx].word;
+}
+window.pickSug = async i => { $("#q").value = sugItems[i].word; hideSug(); await addFromBox(true); };
+
+async function onBoxKey(e, box){
+  if(e.key === "ArrowDown"){ e.preventDefault(); return moveSug(1); }
+  if(e.key === "ArrowUp"){ e.preventDefault(); return moveSug(-1); }
+  if(e.key === "Escape"){ return hideSug(); }
+  if(e.key !== "Enter") { pendingRisky = ""; return; }
+  e.preventDefault();
+  hideSug();
+  await addFromBox(false);
+}
+
+async function addFromBox(fromPick){
+  const box = $("#q");
+  const v = box.value.trim().toLowerCase();
+  if(!v) return;
+  // 打错拦截：词典里查不到就先不收，除非再按一次回车
+  if(!fromPick && v !== pendingRisky){
+    const d = await api("/api/define?w=" + encodeURIComponent(v));
+    if(!d || !d.found){
+      pendingRisky = v;
+      const s = await api("/api/suggest?q=" + encodeURIComponent(v.slice(0,3)));
+      const near = (s.items||[]).slice(0,3).map(x=>x.word).join("、");
+      toast(`"${v}" not in the dictionary${near?` · did you mean ${near}?`:""} · Enter again to add anyway`);
+      return;
+    }
+  }
+  pendingRisky = "";
+  box.value = ""; box.placeholder = "adding…"; box.disabled = true;
+  const r = await post("/api/add", {word: v});
+  box.disabled = false; box.placeholder = "Type a word — Enter to add"; box.focus();
+  if(r) toast(r.merged ? `${r.word} · already saved · ${r.count}×` : `${r.word} · saved`);
+  await loadAll(""); flashRow(r && r.id);
+}
+
 function flashRow(id){
   if(!id) return;
   const el=document.querySelector(`.row[data-id="${id}"]`);
@@ -2284,18 +2367,12 @@ async function loadAll(q, page){
       <div class="count" id="count"></div>
       <div id="rows"></div>`;
     const box=$("#q");
-    box.oninput=()=>{clearTimeout(window._t);
-      window._t=setTimeout(()=>loadAll(box.value.trim()),250)};
-    box.onkeydown=async e=>{
-      if(e.key!=="Enter") return;
-      const v=box.value.trim(); if(!v) return;
-      box.value=""; box.placeholder="adding…"; box.disabled=true;
-      const r=await post("/api/add",{word:v});
-      box.disabled=false; box.placeholder="Type a word — Enter to add"; box.focus();
-      if(r) toast(r.merged ? `${r.word} · already saved · ${r.count}×`
-                           : `${r.word} · saved`);
-      await loadAll(""); flashRow(r&&r.id);
+    box.oninput=()=>{
+      clearTimeout(window._t);
+      window._t=setTimeout(()=>{ loadAll(box.value.trim()); suggest(box.value.trim()); }, 220);
     };
+    box.onkeydown=e=>onBoxKey(e, box);
+    box.onblur=()=>setTimeout(hideSug, 180);
   }
   const data=await api("/api/words?q="+encodeURIComponent(q||"")+"&page="+(page||1));
   if(my!==_seq) return;
@@ -2754,6 +2831,34 @@ def make_handler(cfg, token):
                         out.append(d)
                     return self._send(200, json.dumps(
                         {"rows": out, "total": total, "page": page, "pages": pages},
+                        ensure_ascii=False))
+                if u.path == "/api/suggest":
+                    q = normalize(qs.get("q", [""])[0])
+                    if not q or len(q) < 1:
+                        return self._send(200, json.dumps({"items": []}))
+                    d = dict_db()
+                    items = []
+                    if d:
+                        try:
+                            hi = q[:-1] + chr(ord(q[-1]) + 1)
+                            rows = d.execute(
+                                "SELECT word, translation, frq, bnc FROM dict"
+                                " WHERE word >= ? AND word < ?"
+                                " ORDER BY (word = ?) DESC,"
+                                "          (CASE WHEN frq > 0 THEN frq ELSE 999999 END) ASC"
+                                " LIMIT 8", (q, hi, q)).fetchall()
+                            for r in rows:
+                                items.append({"word": r["word"],
+                                              "zh": (r["translation"] or "")[:60]})
+                        finally:
+                            d.close()
+                    have = {r[0] for r in conn.execute(
+                        "SELECT word FROM words WHERE word >= ? AND word < ?",
+                        (q, q + "\uffff"))}
+                    for it in items:
+                        it["saved"] = it["word"] in have
+                    return self._send(200, json.dumps(
+                        {"items": items, "exact": bool(items and items[0]["word"] == q)},
                         ensure_ascii=False))
                 if u.path == "/api/define":
                     w = normalize(qs.get("w", [""])[0])

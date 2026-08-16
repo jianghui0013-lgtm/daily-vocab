@@ -84,7 +84,8 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
   systemctl daemon-reload
-  systemctl enable -q --now vocab-web vocab-jobs
+  systemctl enable -q vocab-web vocab-jobs
+  systemctl restart vocab-web vocab-jobs      # 重跑脚本 = 更新代码，必须重启才生效
   sleep 2
   systemctl is-active --quiet vocab-web && echo "  网页服务已启动" || {
     echo "  启动失败，看日志：journalctl -u vocab-web -n 30"; exit 1; }
