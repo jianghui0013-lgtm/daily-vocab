@@ -2721,6 +2721,12 @@ window.pkTap = card => {
   pkTimer = setTimeout(() => {
     pkTimer = null;
     if(!card.dataset.zh) return;
+    // 同时只留一张显示中文：点下一个，上一个自动变回英文
+    document.querySelectorAll("#pick .pk.zhon").forEach(x => {
+      if(x === card) return;
+      x.classList.remove("zhon");
+      x.querySelector(".pke").textContent = x.dataset.en;
+    });
     const body = card.querySelector(".pke");
     const on = card.classList.toggle("zhon");
     body.textContent = on ? card.dataset.zh : card.dataset.en;
