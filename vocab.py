@@ -260,6 +260,16 @@ CREATE TABLE IF NOT EXISTS pick (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_pick_status ON pick(status, day);
+
+CREATE TABLE IF NOT EXISTS word_root (
+  word       TEXT PRIMARY KEY,
+  root       TEXT,
+  variants   TEXT,
+  meaning    TEXT,
+  breakdown  TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_word_root ON word_root(root);
 """
 
 
@@ -1448,6 +1458,12 @@ def cmd_watch(args, cfg):
                         notify("生词本", "今天的 %d 条科技商业新闻到了" % got, cfg)
             except Exception as e:
                 print(dim("  新闻抓取出错: %s" % e))
+        # 词根分析，一次一批
+        if cfg.get("api_key") and tick % 30 == 0:
+            try:
+                roots_analyze(conn, cfg, 20)
+            except Exception as e:
+                print(dim("  词根分析出错: %s" % e))
         # 新闻摘要，一次一条
         if cfg.get("api_key") and tick % 20 == 0:
             try:
@@ -1664,6 +1680,145 @@ def cmd_examples(args, cfg):
         else:
             print("  %s %s" % (red("×"), w["word"]))
     print(dim("\n完成 %d/%d" % (ok, len(rows))))
+    return 0
+
+
+# ---------------------------------------------------------------- 词根
+
+ROOT_SYSTEM = ("你是一位词源学老师，服务对象是%s。"
+               "只输出一个 JSON 对象，不要 markdown 代码块，不要解释性文字。")
+
+ROOT_USER = """分析这些英语单词的构词：{words}
+
+对每个词判断它有没有清晰的拉丁/希腊词根。古英语来源的常用词（get、run、bear 之类）
+没有可拆的词根，root 填空字符串。
+
+返回：
+{{"items": [
+  {{"word": "原词",
+    "root": "核心词根，如 tract；没有就填空",
+    "variants": "该词根的常见拼写变体，逗号分隔，如 tract,treat",
+    "meaning": "词根的中文意思，2-6 个字，如 拉、拖",
+    "breakdown": "拆解，如 con-(共同) + tract(拉) + -or(人) → 一起拉合约的人"}}
+]}}"""
+
+
+def roots_analyze(conn, cfg, limit=20, quiet=True):
+    """一次问一批词的构词，省调用次数。"""
+    if not cfg.get("api_key"):
+        return 0
+    rows = conn.execute(
+        "SELECT w.word FROM words w LEFT JOIN word_root r ON r.word = w.word"
+        " WHERE r.word IS NULL ORDER BY w.id LIMIT ?", (limit,)).fetchall()
+    if not rows:
+        return 0
+    words = [r[0] for r in rows]
+    payload = {
+        "model": cfg.get("model"),
+        "messages": [
+            {"role": "system", "content": ROOT_SYSTEM % cfg.get("level")},
+            {"role": "user", "content": ROOT_USER.format(words="、".join(words))},
+        ],
+        "temperature": 0.2,
+        "response_format": {"type": "json_object"},
+    }
+    try:
+        req = urllib.request.Request(
+            cfg.get("api_base", "").rstrip("/") + "/chat/completions",
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers={"Content-Type": "application/json",
+                     "Authorization": "Bearer " + cfg["api_key"]}, method="POST")
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            data = _parse_json(json.loads(resp.read().decode("utf-8"))
+                               ["choices"][0]["message"]["content"])
+    except Exception as e:
+        if not quiet:
+            print(dim("  词根分析失败: %s" % str(e)[:60]))
+        return 0
+    items = (data or {}).get("items")
+    if not isinstance(items, list):
+        return 0
+    got = {}
+    for it in items:
+        w = normalize(str(it.get("word") or ""))
+        if w:
+            got[w] = it
+    n = 0
+    for w in words:                       # 没返回的也占个位，免得反复问
+        it = got.get(w, {})
+        conn.execute(
+            "INSERT OR REPLACE INTO word_root (word, root, variants, meaning,"
+            " breakdown, created_at) VALUES (?,?,?,?,?,?)",
+            (w, normalize(str(it.get("root") or "")), str(it.get("variants") or ""),
+             str(it.get("meaning") or ""), str(it.get("breakdown") or ""), now_iso()))
+        n += 1
+    conn.commit()
+    return n
+
+
+def root_related(conn, variants, exclude, limit=8):
+    """从离线词典里找同根的其它词，排除已收和已跳过的。"""
+    d = dict_db()
+    if not d:
+        return []
+    out = []
+    try:
+        for v in [x.strip() for x in variants.split(",") if len(x.strip()) >= 3][:3]:
+            for r in d.execute(
+                    "SELECT word, translation FROM dict"
+                    " WHERE lemma = word AND translation != '' AND en != ''"
+                    "   AND word LIKE ? AND frq > 0 AND frq < 30000"
+                    " ORDER BY frq LIMIT 40", ("%" + v + "%",)):
+                if r[0] in exclude or any(o["word"] == r[0] for o in out):
+                    continue
+                out.append({"word": r[0], "zh": (r[1] or "")[:40]})
+                if len(out) >= limit:
+                    return out
+    finally:
+        d.close()
+    return out
+
+
+def roots_view(conn, cfg, min_words=2):
+    """按词根分组：每组挂你库里的同根词 + 词典里的关联词。"""
+    groups = {}
+    for r in conn.execute(
+            "SELECT wr.word, wr.root, wr.variants, wr.meaning, wr.breakdown"
+            " FROM word_root wr JOIN words w ON w.word = wr.word"
+            " WHERE wr.root != '' ORDER BY wr.root, wr.word"):
+        g = groups.setdefault(r["root"], {"root": r["root"], "meaning": r["meaning"],
+                                          "variants": r["variants"], "mine": []})
+        g["mine"].append({"word": r["word"], "breakdown": r["breakdown"]})
+    known = {x[0] for x in conn.execute("SELECT word FROM words")}
+    known |= {x[0] for x in conn.execute("SELECT word FROM inbox")}
+    known |= {x[0] for x in conn.execute("SELECT word FROM pick WHERE status='skipped'")}
+    out = []
+    for g in groups.values():
+        if len(g["mine"]) < min_words:
+            continue
+        g["related"] = root_related(conn, g["variants"] or g["root"], known)
+        out.append(g)
+    out.sort(key=lambda x: -len(x["mine"]))
+    return out
+
+
+def cmd_roots(args, cfg):
+    conn = db()
+    if args.analyze:
+        total = 0
+        while True:
+            n = roots_analyze(conn, cfg, 20, quiet=False)
+            if not n:
+                break
+            total += n
+            print(dim("  已分析 %d 个…" % total))
+        print(green("  分析完成 %d 个词" % total))
+    for g in roots_view(conn, cfg, args.min):
+        print("\n%s %s  %s" % (bold(g["root"]), dim(g["meaning"]),
+                                dim("(%d 个)" % len(g["mine"]))))
+        print("  你的: " + ", ".join(m["word"] for m in g["mine"]))
+        if g["related"]:
+            print("  " + dim("关联: " + ", ".join(r["word"] for r in g["related"])))
     return 0
 
 
@@ -2206,6 +2361,25 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
   text-overflow:ellipsis;white-space:nowrap}
 .sgs{font-size:10.5px;color:var(--accent);border:1px solid var(--accent);
   border-radius:5px;padding:0 4px;flex:none}
+.rt{background:var(--card);border:1px solid var(--line);border-radius:11px;
+  margin-bottom:7px;box-shadow:var(--shadow);overflow:hidden}
+.rthead{display:flex;align-items:baseline;gap:11px;padding:12px 15px;cursor:pointer;
+  user-select:none;-webkit-user-select:none}
+.rthead b{font-size:17px;font-weight:600;font-family:var(--mono,inherit)}
+.rtm{font-size:13.5px;color:var(--dim)}
+.rtn{margin-left:auto;font-size:12px;color:var(--dim);border:1px solid var(--line);
+  border-radius:9px;padding:1px 8px}
+.rt.open .rtn{border-color:var(--accent);color:var(--accent)}
+.rtbody{display:none;padding:0 15px 14px;border-top:1px solid var(--line)}
+.rt.open .rtbody{display:block}
+.rtlab{font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;
+  margin:11px 0 7px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:14px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);
+  position:relative;cursor:default}
+.chip.mine{border-color:var(--accent);color:var(--accent)}
+.chip.add{color:var(--dim);cursor:pointer;border-style:dashed}
+.chip.add:hover{color:var(--fg);border-color:var(--dim)}
 .pkgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
 @media (max-width:880px){ .pkgrid{grid-template-columns:repeat(2,1fr)} }
 @media (max-width:560px){ .pkgrid{grid-template-columns:1fr} }
@@ -2320,6 +2494,7 @@ body.wordtip .tip:hover::after{display:none}
     <div class="tabs">
       <button class="tab on" data-t="all">Words</button>
       <button class="tab" data-t="pick">Pick</button>
+      <button class="tab" data-t="roots">Roots</button>
       <button class="tab" data-t="news">News</button>
       <button class="tab" data-t="review">Review</button>
       <button class="tab" id="cnt" title="Show / hide Chinese">ZH</button>
@@ -2328,6 +2503,7 @@ body.wordtip .tip:hover::after{display:none}
   </header>
   <div id="all"></div>
   <div id="pick" class="hidden"></div>
+  <div id="roots" class="hidden"></div>
   <div id="news" class="hidden"></div>
   <div id="review" class="hidden"></div>
   <div id="set" class="hidden"></div>
@@ -2346,7 +2522,7 @@ const post=(p,b)=>api(p,{method:"POST",headers:{"Content-Type":"application/json
 const esc=s=>(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 let tab="all", Q=[], qi=0, flipped=false;
-const TABS=["all","pick","news","review","set"];
+const TABS=["all","pick","roots","news","review","set"];
 
 function activate(t){
   if(!TABS.includes(t)) t="all";
@@ -2358,6 +2534,7 @@ function activate(t){
   TABS.forEach(x=>$("#"+x).classList.toggle("hidden", x!==t));
   if(t==="all") loadAll("");
   if(t==="pick") loadPick();
+  if(t==="roots") loadRoots();
   if(t==="news") loadNews();
   if(t==="review") loadQueue();
   if(t==="set") loadSet();
@@ -2699,6 +2876,58 @@ window.forget=async(id,ev)=>{
     const c = document.querySelector("#review .count");
     if(c) c.firstChild.textContent = ` ${n} random words `;
   }
+};
+
+// ---------- 词根：只列词根，点开才展开
+const openRoots = new Set();
+
+async function loadRoots(){
+  const el = $("#roots");
+  const r = await api("/api/roots");
+  const gs = r.groups || [];
+  if(!gs.length){
+    el.innerHTML = `<div class="empty">${r.pending && r.has_key
+      ? `Working out the roots of your ${r.pending} words…`
+      : "No shared roots yet — collect a few more words."}</div>`;
+    if(r.pending && r.has_key) setTimeout(()=>{ if(tab==="roots") loadRoots(); }, 12000);
+    return;
+  }
+  el.innerHTML =
+    `<div class="count">${gs.length} roots across your words${
+      r.pending ? ` · ${r.pending} still being analysed` : ""}</div>
+     ${gs.map(g => `
+       <div class="rt${openRoots.has(g.root) ? " open" : ""}" data-r="${esc(g.root)}">
+         <div class="rthead" onclick="toggleRoot(this.parentNode)">
+           <b>${esc(g.root)}</b><span class="rtm">${esc(g.meaning)}</span>
+           <span class="rtn">${g.mine.length}</span>
+         </div>
+         <div class="rtbody">
+           <div class="rtlab">In your list</div>
+           <div class="chips">${g.mine.map(m =>
+             `<span class="chip mine tip" data-zh="${esc(m.breakdown)}">${esc(m.word)}</span>`
+           ).join("")}</div>
+           ${g.related.length ? `<div class="rtlab">Same root — double-click to add</div>
+           <div class="chips">${g.related.map(x =>
+             `<span class="chip add tip" data-zh="${esc(x.zh)}" data-w="${esc(x.word)}"
+                ondblclick="addChip(this)">${esc(x.word)}</span>`).join("")}</div>` : ""}
+         </div>
+       </div>`).join("")}`;
+  if(r.pending && r.has_key) setTimeout(()=>{ if(tab==="roots") loadRoots(); }, 20000);
+}
+
+window.toggleRoot = el => {
+  const on = el.classList.toggle("open");
+  if(on) openRoots.add(el.dataset.r); else openRoots.delete(el.dataset.r);
+};
+
+window.addChip = async el => {
+  if(el.dataset.busy) return;
+  el.dataset.busy = "1";
+  getSelection().removeAllRanges();
+  const w = el.dataset.w;
+  const r = await post("/api/add", {word: w});
+  toast(r && r.merged ? `${w} · already saved` : `${w} · added`);
+  el.classList.remove("add"); el.classList.add("mine");
 };
 
 // ---------- 推荐词：点一个就收进词库，原位补一个新的
@@ -3085,6 +3314,13 @@ def make_handler(cfg, token):
                         "zh": d.get("definition") or "",
                         "en": d.get("definition_en") or "",
                     }, ensure_ascii=False))
+                if u.path == "/api/roots":
+                    pend = conn.execute(
+                        "SELECT COUNT(*) FROM words w LEFT JOIN word_root r"
+                        " ON r.word = w.word WHERE r.word IS NULL").fetchone()[0]
+                    return self._send(200, json.dumps(
+                        {"groups": roots_view(conn, cfg), "pending": pend,
+                         "has_key": bool(cfg.get("api_key"))}, ensure_ascii=False))
                 if u.path == "/api/pick":
                     return self._send(200, json.dumps(
                         {"items": pick_batch(conn, cfg)}, ensure_ascii=False))
@@ -3517,6 +3753,11 @@ def main():
     ip = sub.add_parser("import", help="从 JSON 导回词库")
     ip.add_argument("path")
     ip.set_defaults(func=cmd_import)
+
+    rt = sub.add_parser("roots", help="按词根把词库串起来")
+    rt.add_argument("--analyze", action="store_true", help="给还没分析的词跑词根分析")
+    rt.add_argument("--min", type=int, default=2, help="至少几个同根词才成组")
+    rt.set_defaults(func=cmd_roots)
 
     pk = sub.add_parser("pick", help="推荐词")
     pk.add_argument("-n", "--size", type=int, default=None)
