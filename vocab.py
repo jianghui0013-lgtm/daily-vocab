@@ -270,6 +270,12 @@ CREATE TABLE IF NOT EXISTS word_root (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_word_root ON word_root(root);
+
+CREATE TABLE IF NOT EXISTS root_family (
+  root       TEXT PRIMARY KEY,
+  words      TEXT,
+  created_at TEXT NOT NULL
+);
 """
 
 
@@ -1756,26 +1762,72 @@ def roots_analyze(conn, cfg, limit=20, quiet=True):
     return n
 
 
-def root_related(conn, variants, exclude, limit=8):
-    """从离线词典里找同根的其它词，排除已收和已跳过的。"""
-    d = dict_db()
-    if not d:
+FAMILY_USER = """这些是英语词根：{roots}
+
+对每个词根，列出 10 个确实由它派生的常用英语单词。
+只要词源上真的同根的（比如 vor「吃」是 carnivore、devour、voracious，
+不是 favor、ivory 这种只是碰巧含有这几个字母的）。
+
+返回：
+{{"items": [{{"root": "词根", "words": "逗号分隔的 10 个单词"}}]}}"""
+
+
+def root_family_fill(conn, cfg, roots, quiet=True):
+    """让 AI 给出真正同根的词族——字符串匹配会把 favor 算成 vor 的同根词。"""
+    todo = [r for r in roots if not conn.execute(
+        "SELECT 1 FROM root_family WHERE root = ?", (r,)).fetchone()]
+    if not todo or not cfg.get("api_key"):
+        return 0
+    todo = todo[:12]
+    payload = {
+        "model": cfg.get("model"),
+        "messages": [
+            {"role": "system", "content": ROOT_SYSTEM % cfg.get("level")},
+            {"role": "user", "content": FAMILY_USER.format(roots="、".join(todo))},
+        ],
+        "temperature": 0.2,
+        "response_format": {"type": "json_object"},
+    }
+    try:
+        req = urllib.request.Request(
+            cfg.get("api_base", "").rstrip("/") + "/chat/completions",
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers={"Content-Type": "application/json",
+                     "Authorization": "Bearer " + cfg["api_key"]}, method="POST")
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            data = _parse_json(json.loads(resp.read().decode("utf-8"))
+                               ["choices"][0]["message"]["content"])
+    except Exception as e:
+        if not quiet:
+            print(dim("  词族生成失败: %s" % str(e)[:60]))
+        return 0
+    got = {normalize(str(i.get("root") or "")): str(i.get("words") or "")
+           for i in ((data or {}).get("items") or [])}
+    n = 0
+    for r in todo:
+        conn.execute(
+            "INSERT OR REPLACE INTO root_family (root, words, created_at) VALUES (?,?,?)",
+            (r, got.get(r, ""), now_iso()))
+        n += 1
+    conn.commit()
+    return n
+
+
+def root_related(conn, root, exclude, limit=10):
+    """同根词族里，你还没收的那些。词形以离线词典为准，AI 编的假词会被剔掉。"""
+    row = conn.execute("SELECT words FROM root_family WHERE root = ?", (root,)).fetchone()
+    if not row or not row[0]:
         return []
     out = []
-    try:
-        for v in [x.strip() for x in variants.split(",") if len(x.strip()) >= 3][:3]:
-            for r in d.execute(
-                    "SELECT word, translation FROM dict"
-                    " WHERE lemma = word AND translation != '' AND en != ''"
-                    "   AND word LIKE ? AND frq > 0 AND frq < 30000"
-                    " ORDER BY frq LIMIT 40", ("%" + v + "%",)):
-                if r[0] in exclude or any(o["word"] == r[0] for o in out):
-                    continue
-                out.append({"word": r[0], "zh": (r[1] or "")[:40]})
-                if len(out) >= limit:
-                    return out
-    finally:
-        d.close()
+    for w in [normalize(x) for x in row[0].split(",")]:
+        if not w or w in exclude or any(o["word"] == w for o in out):
+            continue
+        e = dict_lookup(w)
+        if not e or not e.get("definition"):
+            continue                       # 词典里查不到就是 AI 编的，丢掉
+        out.append({"word": w, "zh": (e.get("definition") or "")[:40]})
+        if len(out) >= limit:
+            break
     return out
 
 
@@ -1792,11 +1844,11 @@ def roots_view(conn, cfg, min_words=2):
     known = {x[0] for x in conn.execute("SELECT word FROM words")}
     known |= {x[0] for x in conn.execute("SELECT word FROM inbox")}
     known |= {x[0] for x in conn.execute("SELECT word FROM pick WHERE status='skipped'")}
+    keep = [g for g in groups.values() if len(g["mine"]) >= min_words]
+    root_family_fill(conn, cfg, [g["root"] for g in keep])
     out = []
-    for g in groups.values():
-        if len(g["mine"]) < min_words:
-            continue
-        g["related"] = root_related(conn, g["variants"] or g["root"], known)
+    for g in keep:
+        g["related"] = root_related(conn, g["root"], known)
         out.append(g)
     out.sort(key=lambda x: -len(x["mine"]))
     return out
