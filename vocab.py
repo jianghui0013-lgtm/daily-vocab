@@ -2414,7 +2414,7 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
 .sgs{font-size:10.5px;color:var(--accent);border:1px solid var(--accent);
   border-radius:5px;padding:0 4px;flex:none}
 .rt{background:var(--card);border:1px solid var(--line);border-radius:11px;
-  margin-bottom:7px;box-shadow:var(--shadow);overflow:hidden}
+  margin-bottom:7px;box-shadow:var(--shadow)}   /* 不能 overflow:hidden，会裁掉提示框 */
 .rthead{display:flex;align-items:baseline;gap:11px;padding:12px 15px;cursor:pointer;
   user-select:none;-webkit-user-select:none}
 .rthead b{font-size:17px;font-weight:600;font-family:var(--mono,inherit)}
@@ -2429,6 +2429,7 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:14px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);
   position:relative;cursor:default}
+.chip.tip::after{top:auto;bottom:100%;margin:0 0 6px;left:50%;transform:translateX(-50%)}
 .chip.mine{border-color:var(--accent);color:var(--accent)}
 .chip.add{color:var(--dim);cursor:pointer;border-style:dashed}
 .chip.add:hover{color:var(--fg);border-color:var(--dim)}
