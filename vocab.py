@@ -2767,7 +2767,6 @@ function rowHTML(w, st){
           : (w.sentence?`<div class="s">${esc(w.sentence)}</div>`:"")):""}
       <button class="del" title="Remove — and stop capturing this word" onclick="forget(${w.id},event)">×</button>
     </div>
-  </div>
     <div class="rootpanel"></div>
   </div>`;
 }
