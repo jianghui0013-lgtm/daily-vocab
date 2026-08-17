@@ -1453,6 +1453,24 @@ def cmd_watch(args, cfg):
     while True:
         time.sleep(cfg["watch_interval"])
         tick += 1
+        # 连着服务器时，本机只管抓词上传；下面这些后台活儿由服务器那边跑，
+        # 否则两边都做，白烧一份 token
+        if remote:
+            if not has_clip:
+                continue
+            try:
+                cur = read_clipboard()
+            except Exception:
+                continue
+            h = hashlib.md5(cur.encode("utf-8", "ignore")).hexdigest()
+            if h == last:
+                continue
+            last = h
+            try:
+                handle(cur, args.verbose)
+            except Exception as e:
+                print(dim("  处理出错: %s: %s" % (type(e).__name__, e)))
+            continue
         # 每天到点抓新闻（电脑睡着错过了，醒来会补上）
         if tick % 60 == 0:
             try:
