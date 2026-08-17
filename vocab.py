@@ -2211,23 +2211,20 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
 @media (max-width:560px){ .pkgrid{grid-template-columns:1fr} }
 .pk{background:var(--card);border:1px solid var(--line);border-radius:11px;
   padding:11px 13px;cursor:pointer;box-shadow:var(--shadow);position:relative;
-  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+  touch-action:manipulation}
 .pk:hover{border-color:var(--dim)}
 .pk.sel{border-color:var(--accent);opacity:.35}
 .pk.gone{opacity:.25}
-.pkx,.pkzh{position:absolute;top:5px;border:none;background:transparent;
-  color:var(--line);line-height:1;cursor:pointer;padding:2px 5px;border-radius:6px;
-  font-family:inherit;opacity:0;transition:opacity .12s;
+.pkx{position:absolute;right:6px;top:5px;border:none;background:transparent;
+  color:var(--line);font-size:17px;line-height:1;cursor:pointer;padding:3px 7px;
+  border-radius:6px;font-family:inherit;opacity:0;transition:opacity .12s;
   -webkit-tap-highlight-color:transparent}
-.pkx{right:6px;font-size:16px}
-.pkzh{right:30px;font-size:12px;font-weight:600}
-.pk:hover .pkx,.pk:hover .pkzh{opacity:1}
+.pk:hover .pkx{opacity:1}
 .pkx:hover{color:var(--bad);background:var(--bg)}
-.pkzh:hover{color:var(--accent);background:var(--bg)}
-.pk.zhon .pkzh{opacity:1;color:var(--accent)}
+.pk.zhon{border-color:var(--dim)}
 .pk.zhon .pke{color:var(--fg)}
-.pk.zhon::after{display:none}
-@media (hover:none){ .pkx,.pkzh{opacity:.5} }
+@media (hover:none){ .pkx{opacity:.5} }
 @keyframes pknew{0%{background:color-mix(in srgb,var(--accent) 16%,var(--card))}
                  100%{background:var(--card)}}
 .pk.pknew{animation:pknew .7s ease-out}
@@ -2707,22 +2704,32 @@ window.forget=async(id,ev)=>{
 // ---------- 推荐词：点一个就收进词库，原位补一个新的
 function pkCardHTML(it){
   return `<div class="pk${it.zh ? " tip" : ""}"${it.zh ? ` data-zh="${esc(it.zh)}"` : ""}
-       data-w="${esc(it.word)}" data-en="${esc(it.en)}" onclick="pickAct(this,'add')">
+       data-w="${esc(it.word)}" data-en="${esc(it.en)}"
+       onclick="pkTap(this)" ondblclick="pkTake(this)">
     <div class="pkw"><span class="wt">${esc(it.word)}</span>${
       it.phonetic ? `<span class="ph">${esc(it.phonetic)}</span>` : ""}</div>
     <div class="pke">${esc(it.en)}</div>
-    ${it.zh ? `<button class="pkzh" title="Show the Chinese"
-      onclick="event.stopPropagation();pkZh(this.parentNode)">中</button>` : ""}
     <button class="pkx" title="Not interested — show another"
       onclick="event.stopPropagation();pickAct(this.parentNode,'skip')">×</button>
   </div>`;
 }
 
-// 手机上没有悬停：点「中」看中文，点卡片其它地方才入库
-window.pkZh = card => {
-  const body = card.querySelector(".pke");
-  const on = card.classList.toggle("zhon");
-  body.textContent = on ? card.dataset.zh : card.dataset.en;
+// 单击看中文，双击才收进词库
+let pkTimer = null;
+window.pkTap = card => {
+  if(pkTimer){ clearTimeout(pkTimer); pkTimer = null; return; }  // 第二下交给 dblclick
+  pkTimer = setTimeout(() => {
+    pkTimer = null;
+    if(!card.dataset.zh) return;
+    const body = card.querySelector(".pke");
+    const on = card.classList.toggle("zhon");
+    body.textContent = on ? card.dataset.zh : card.dataset.en;
+  }, 260);
+};
+window.pkTake = card => {
+  clearTimeout(pkTimer); pkTimer = null;
+  getSelection().removeAllRanges();          // 双击会选中文字，清掉
+  pickAct(card, "add");
 };
 
 async function loadPick(){
@@ -2734,7 +2741,7 @@ async function loadPick(){
     return;
   }
   el.innerHTML =
-    `<div class="count">Tap 中 for the meaning · tap the card to add it · tap × to skip</div>
+    `<div class="count">Tap for the meaning · double-tap to add it · tap × to skip</div>
      <div class="pkgrid">${items.map(pkCardHTML).join("")}</div>`;
 }
 
