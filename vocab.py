@@ -2471,6 +2471,8 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
 .exi{position:relative}
 .exi .en{font-size:14px;line-height:1.55;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis}
+u.kw{text-decoration:underline;text-decoration-color:var(--accent);
+  text-decoration-thickness:1.5px;text-underline-offset:3px}
 .exi .zh{font-size:13px;color:var(--dim);margin-top:1px}
 .row .w.tip::after,.card .word.tip::after{font-weight:400}
 .den{font-size:13.5px;color:var(--dim);margin-top:4px;line-height:1.5;
@@ -2688,6 +2690,7 @@ async function addFromBox(fromPick){
   const r = await post("/api/add", {word: v});
   box.disabled = false; box.placeholder = "Type a word — Enter to add"; box.focus();
   if(r) toast(r.merged ? `${r.word} · already saved · ${r.count}×` : `${r.word} · saved`);
+      loadKnown();
   await loadAll(""); flashRow(r && r.id);
 }
 
@@ -2775,8 +2778,35 @@ window.star=async(id,ev,delta)=>{
   el.classList.toggle("on", r.count>0);
 };
 
+// 例句里出现你已经收过的词，画一条下划线
+let knownSet = null;
+async function loadKnown(){
+  try{ const r = await api("/api/known"); knownSet = new Set(r.words || []); }
+  catch(e){ knownSet = new Set(); }
+}
+function kwStems(w){
+  const o = [w];
+  const rules = [["ies","y"],["ied","y"],["ing",""],["ed",""],["es",""],["s",""],
+                 ["ly",""],["er",""],["est",""]];
+  for(const [suf, rp] of rules){
+    if(w.endsWith(suf) && w.length - suf.length >= 2){
+      const b = w.slice(0, w.length - suf.length) + rp;
+      o.push(b, b + "e");
+      if(b.length > 2 && b[b.length-1] === b[b.length-2]) o.push(b.slice(0,-1));
+    }
+  }
+  return o;
+}
+function markKnown(text){
+  if(!knownSet || !knownSet.size) return esc(text);
+  return esc(text).replace(/[A-Za-z][A-Za-z'-]*/g, m => {
+    const low = m.toLowerCase();
+    return kwStems(low).some(x => knownSet.has(x)) ? `<u class="kw">${m}</u>` : m;
+  });
+}
+
 window.exHTML=list=>!list||!list.length?"":`<div class="ex">`+list.map(e=>
-  `<div class="exi${e.zh?" tip":""}"${e.zh?` data-zh="${esc(e.zh)}"`:""}><div class="en">${esc(e.en)}</div>${e.zh?`<div class="zh">${esc(e.zh)}</div>`:""}</div>`
+  `<div class="exi${e.zh?" tip":""}"${e.zh?` data-zh="${esc(e.zh)}"`:""}><div class="en">${markKnown(e.en)}</div>${e.zh?`<div class="zh">${esc(e.zh)}</div>`:""}</div>`
 ).join("")+`</div>`;
 
 // ---------- 设置
@@ -2980,6 +3010,7 @@ window.addChip = async el => {
   const w = el.dataset.w;
   const r = await post("/api/add", {word: w});
   toast(r && r.merged ? `${w} · already saved` : `${w} · added`);
+  loadKnown();
   el.classList.remove("add"); el.classList.add("mine");
 };
 
@@ -3183,7 +3214,7 @@ window.addEventListener("blur", hideWtip);
 
 window.goReview=()=>document.querySelector('[data-t="review"]').click();
 window.goSet=()=>document.querySelector('[data-t="set"]').click();
-activate(localStorage.getItem("tab") || "all");
+loadKnown().then(() => activate(localStorage.getItem("tab") || "all"));
 </script></body></html>"""
 
 
@@ -3367,6 +3398,11 @@ def make_handler(cfg, token):
                         "zh": d.get("definition") or "",
                         "en": d.get("definition_en") or "",
                     }, ensure_ascii=False))
+                if u.path == "/api/known":
+                    ws = [r[0] for r in conn.execute("SELECT word FROM words")]
+                    ws += [r[0] for r in conn.execute(
+                        "SELECT DISTINCT lemma FROM words WHERE lemma != ''")]
+                    return self._send(200, json.dumps({"words": sorted(set(ws))}))
                 if u.path == "/api/roots":
                     pend = conn.execute(
                         "SELECT COUNT(*) FROM words w LEFT JOIN word_root r"
