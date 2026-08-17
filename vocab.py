@@ -2408,7 +2408,16 @@ button.g1 small,button.g2 small,button.g3 small{color:var(--dim)}
 .prog i{display:block;height:100%;background:var(--accent);transition:width .25s}
 .row{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 16px;
   margin-bottom:8px;box-shadow:var(--shadow);position:relative;
-  display:flex;gap:22px;align-items:flex-start}
+  display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
+.wt.rootable{cursor:pointer}
+.wt.rootable:hover{text-decoration:underline;text-decoration-style:dotted;
+  text-underline-offset:4px}
+.rootpanel{display:none;flex:0 0 100%;margin-top:12px;padding-top:12px;
+  border-top:1px solid var(--line)}
+.row.rootopen .rootpanel{display:block}
+.wrhead{display:flex;align-items:baseline;gap:10px}
+.wrhead b{font-size:17px;font-weight:600}
+.wrbd{font-size:13.5px;color:var(--dim);margin-top:4px}
 .cl{flex:0 0 33%;min-width:0}
 .cr{flex:1;min-width:0;padding-left:22px;border-left:1px solid var(--line);
   align-self:stretch;position:relative}
@@ -2747,7 +2756,7 @@ function flashRow(id){
 function rowHTML(w, st){
   return `<div class="row" data-id="${w.id}">
     <div class="cl">
-      <div class="w${w.definition?" tip":""}"${w.definition?` data-zh="${esc(w.definition)}"`:""}><span class="wt">${esc(w.word)}</span>${w.phonetic?`<span class="ph">${esc(w.phonetic)}</span>`:""}${w.encounter_count>1?`<span class="meta">×${w.encounter_count}</span>`:""}${starHTML(w.id,w.study_count)}</div>
+      <div class="w${w.definition?" tip":""}"${w.definition?` data-zh="${esc(w.definition)}"`:""}><span class="wt rootable" onclick="wordRoot(this)">${esc(w.word)}</span>${w.phonetic?`<span class="ph">${esc(w.phonetic)}</span>`:""}${w.encounter_count>1?`<span class="meta">×${w.encounter_count}</span>`:""}${starHTML(w.id,w.study_count)}</div>
       ${w.definition_en?`<div class="den">${esc(w.definition_en)}</div>`:""}
       ${w.definition?`<div class="d zh">${esc(w.definition)}</div>`:""}
     </div>
@@ -2758,8 +2767,47 @@ function rowHTML(w, st){
           : (w.sentence?`<div class="s">${esc(w.sentence)}</div>`:"")):""}
       <button class="del" title="Remove — and stop capturing this word" onclick="forget(${w.id},event)">×</button>
     </div>
+  </div>
+    <div class="rootpanel"></div>
   </div>`;
 }
+
+// 点单词 → 就地展开它的词根和同根词，可以一路发散着收
+let wrTimer = null;
+window.wordRoot = el => {
+  if(wrTimer){ clearTimeout(wrTimer); wrTimer = null; return; }   // 第二下是双击，交给它
+  wrTimer = setTimeout(async () => {
+    wrTimer = null;
+    const row = el.closest(".row");
+    const panel = row.querySelector(".rootpanel");
+    if(!panel) return;
+    if(row.classList.contains("rootopen")){
+      row.classList.remove("rootopen");
+      return;
+    }
+    document.querySelectorAll(".row.rootopen").forEach(x => x.classList.remove("rootopen"));
+    row.classList.add("rootopen");
+    if(panel.dataset.loaded !== "1"){
+      panel.innerHTML = `<div class="rtlab">looking up the root…</div>`;
+      const d = await api("/api/word_root?w=" + encodeURIComponent(el.textContent.trim()));
+      panel.dataset.loaded = "1";
+      panel.innerHTML = !d.root
+        ? `<div class="rtlab">No Latin/Greek root — this one is native English.</div>`
+        : `<div class="wrhead"><b>${esc(d.root)}</b><span class="rtm">${esc(d.meaning)}</span></div>
+           ${d.breakdown ? `<div class="wrbd">${esc(d.breakdown)}</div>` : ""}
+           ${d.origin || d.story ? `<div class="rtstory">
+             ${d.origin ? `<div class="rtorig">${esc(d.origin)}</div>` : ""}
+             ${d.story ? `<div class="rtsy">${esc(d.story)}</div>` : ""}</div>` : ""}
+           ${d.mine.length ? `<div class="rtlab">Also in your list</div>
+             <div class="chips">${d.mine.map(x =>
+               `<span class="chip mine">${esc(x)}</span>`).join("")}</div>` : ""}
+           ${d.related.length ? `<div class="rtlab">Same root — double-click to add</div>
+             <div class="chips">${d.related.map(x =>
+               `<span class="chip add tip" data-zh="${esc(x.zh)}" data-w="${esc(x.word)}"
+                  ondblclick="addChip(this)">${esc(x.word)}</span>`).join("")}</div>` : ""}`;
+    }
+  }, 260);
+};
 
 let _seq=0, curPage=1, totalPages=1;
 async function loadAll(q, page){
@@ -3427,6 +3475,30 @@ def make_handler(cfg, token):
                         "phonetic": d.get("phonetic") or "",
                         "zh": d.get("definition") or "",
                         "en": d.get("definition_en") or "",
+                    }, ensure_ascii=False))
+                if u.path == "/api/word_root":
+                    w = normalize(qs.get("w", [""])[0])
+                    r = conn.execute(
+                        "SELECT root, meaning, breakdown FROM word_root WHERE word = ?",
+                        (w,)).fetchone()
+                    if not r or not r["root"]:
+                        return self._send(200, json.dumps({"root": ""}))
+                    root = r["root"]
+                    f = conn.execute(
+                        "SELECT origin, story FROM root_family WHERE root = ?",
+                        (root,)).fetchone()
+                    mine = [x[0] for x in conn.execute(
+                        "SELECT wr.word FROM word_root wr JOIN words wd ON wd.word = wr.word"
+                        " WHERE wr.root = ? AND wr.word != ? ORDER BY wr.word", (root, w))]
+                    known = {x[0] for x in conn.execute("SELECT word FROM words")}
+                    known |= {x[0] for x in conn.execute("SELECT word FROM inbox")}
+                    return self._send(200, json.dumps({
+                        "root": root, "meaning": r["meaning"] or "",
+                        "breakdown": r["breakdown"] or "",
+                        "origin": (f["origin"] if f else "") or "",
+                        "story": (f["story"] if f else "") or "",
+                        "mine": mine,
+                        "related": root_related(conn, root, known),
                     }, ensure_ascii=False))
                 if u.path == "/api/known":
                     ws = [r[0] for r in conn.execute("SELECT word FROM words")]
