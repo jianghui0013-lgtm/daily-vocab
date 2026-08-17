@@ -45,7 +45,7 @@ DEFAULT_CFG = {
     "lan_token": "",          # 手机访问用的固定口令，首次开 --lan 时自动生成
     "news_hour": 6,           # 每天几点抓（本地时间，24 小时制）
     "news_count": 10,         # 每天抓几条
-    "pick_size": 50,          # 一批推荐几个词
+    "pick_size": 21,          # 推荐区同时摆几个词（3 列 × 7 行）
 }
 
 
@@ -2206,15 +2206,17 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
   text-overflow:ellipsis;white-space:nowrap}
 .sgs{font-size:10.5px;color:var(--accent);border:1px solid var(--accent);
   border-radius:5px;padding:0 4px;flex:none}
-.pkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;
-  margin-bottom:76px}
+.pkgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:80px}
+@media (max-width:880px){ .pkgrid{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:560px){ .pkgrid{grid-template-columns:1fr} }
 .pk{background:var(--card);border:1px solid var(--line);border-radius:11px;
   padding:11px 13px;cursor:pointer;box-shadow:var(--shadow);position:relative;
   user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
 .pk:hover{border-color:var(--dim)}
-.pk.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
-.pk.sel::before{content:"✓";position:absolute;right:9px;top:8px;color:var(--accent);
-  font-weight:700;font-size:13px}
+.pk.sel{border-color:var(--accent);opacity:.35}
+@keyframes pknew{0%{background:color-mix(in srgb,var(--accent) 16%,var(--card))}
+                 100%{background:var(--card)}}
+.pk.pknew{animation:pknew .7s ease-out}
 .pkw{font-size:16px;font-weight:600;display:flex;align-items:baseline;gap:7px}
 .pke{font-size:12.5px;color:var(--dim);margin-top:3px;line-height:1.45;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
@@ -2223,9 +2225,6 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
   justify-content:center;padding:12px 16px calc(12px + env(safe-area-inset-bottom));
   background:color-mix(in srgb,var(--bg) 88%,transparent);
   backdrop-filter:blur(10px);border-top:1px solid var(--line)}
-.pkgo{padding:11px 22px;border-radius:10px;border:none;background:var(--accent);
-  color:var(--card);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
-.pkgo:disabled{opacity:.5}
 .pkskip{padding:11px 18px;border-radius:10px;border:1px solid var(--line);
   background:var(--card);color:var(--dim);font-size:14px;cursor:pointer;font-family:inherit}
 .pkskip:hover{color:var(--bad);border-color:var(--bad)}
@@ -2697,51 +2696,52 @@ window.forget=async(id,ev)=>{
   }
 };
 
-// ---------- 推荐词：挑你想学的，剩下的一键不再出现
-let pickSel = new Set();
+// ---------- 推荐词：点一个就收进词库，原位补一个新的
+function pkCardHTML(it){
+  return `<div class="pk${it.zh ? " tip" : ""}"${it.zh ? ` data-zh="${esc(it.zh)}"` : ""}
+       data-w="${esc(it.word)}" onclick="takePick(this)">
+    <div class="pkw"><span class="wt">${esc(it.word)}</span>${
+      it.phonetic ? `<span class="ph">${esc(it.phonetic)}</span>` : ""}</div>
+    <div class="pke">${esc(it.en)}</div>
+  </div>`;
+}
 
 async function loadPick(){
   const el = $("#pick");
   const r = await api("/api/pick");
   const items = r.items || [];
-  pickSel = new Set(items.filter(i => i.selected).map(i => i.word));
   if(!items.length){
     el.innerHTML = `<div class="empty">Nothing left to recommend.</div>`;
     return;
   }
   el.innerHTML =
-    `<div class="count">Tap the ones you want to learn · ${items.length} words</div>
-     <div class="pkgrid">${items.map(it => `
-       <div class="pk${it.selected ? " sel" : ""}${it.zh ? " tip" : ""}"${it.zh ? ` data-zh="${esc(it.zh)}"` : ""}
-            data-w="${esc(it.word)}" onclick="togglePick(this)">
-         <div class="pkw"><span class="wt">${esc(it.word)}</span>${
-           it.phonetic ? `<span class="ph">${esc(it.phonetic)}</span>` : ""}</div>
-         <div class="pke">${esc(it.en)}</div>
-       </div>`).join("")}</div>
+    `<div class="count">Tap a word to add it to your list — a new one takes its place</div>
+     <div class="pkgrid">${items.map(pkCardHTML).join("")}</div>
      <div class="pkbar">
-       <button class="pkgo" id="pkgo" onclick="commitPick(true)">Add ${pickSel.size} · skip the rest</button>
-       <button class="pkskip" onclick="commitPick(false)">Skip all ${items.length}</button>
+       <button class="pkskip" onclick="skipPick()">Skip all ${items.length} · show me another set</button>
      </div>`;
 }
 
-window.togglePick = el => {
+window.takePick = async el => {
+  if(el.dataset.busy) return;
+  el.dataset.busy = "1";
   const w = el.dataset.w;
-  const on = !pickSel.has(w);
-  if(on){ pickSel.add(w); el.classList.add("sel"); }
-  else { pickSel.delete(w); el.classList.remove("sel"); }
-  const b = $("#pkgo");
-  if(b) b.textContent = `Add ${pickSel.size} · skip the rest`;
-  post("/api/pick/select", {word: w, on});      // 立刻存下，刷新后还在
+  el.classList.add("sel");
+  const r = await post("/api/pick/take", {word: w});
+  toast(`${w} · added`);
+  if(r && r.next){                       // 原位换成新词，网格不跳动
+    el.outerHTML = pkCardHTML(r.next);
+    const fresh = document.querySelector(`#pick .pk[data-w="${r.next.word}"]`);
+    if(fresh){ fresh.classList.add("pknew"); setTimeout(()=>fresh.classList.remove("pknew"), 700); }
+  } else {
+    el.remove();
+  }
 };
 
-window.commitPick = async keep => {
+window.skipPick = async () => {
   const all = [...document.querySelectorAll("#pick .pk")].map(x => x.dataset.w);
-  const add = keep ? [...pickSel] : [];
-  const skip = all.filter(w => !add.includes(w));
-  const btn = $("#pkgo");
-  if(btn){ btn.disabled = true; btn.textContent = "working…"; }
-  const r = await post("/api/pick", {add, skip});
-  toast(r && r.added ? `${r.added} words added to your list` : "new batch");
+  await post("/api/pick", {add: [], skip: all});
+  toast("new set");
   loadPick();
 };
 
@@ -3177,16 +3177,22 @@ def make_handler(cfg, token):
                     return self._send(200, json.dumps(
                         {"ok": True, "added": added, "bumped": sorted(set(bumped)),
                          "skipped": reason}, ensure_ascii=False))
-                if u.path == "/api/pick/select":
+                if u.path == "/api/pick/take":
                     w = normalize(str(body.get("word") or ""))
-                    on = bool(body.get("on"))
-                    conn.execute("UPDATE pick SET status=? WHERE word=?"
-                                 " AND status IN ('pending','want')",
-                                 ("want" if on else "pending", w))
+                    if not w:
+                        return self._send(400, json.dumps({"error": "empty"}))
+                    conn.execute("UPDATE pick SET status='added' WHERE word=?", (w,))
+                    if not find_word(conn, w):
+                        e = dict_lookup(w) or {}
+                        insert_word(conn, e.get("lemma") or w, e, w, "", "推荐")
                     conn.commit()
-                    n = conn.execute(
-                        "SELECT COUNT(*) FROM pick WHERE status='want'").fetchone()[0]
-                    return self._send(200, json.dumps({"ok": True, "selected": n}))
+                    # 立刻补一个新词顶上这个位置
+                    before = {r[0] for r in conn.execute(
+                        "SELECT word FROM pick WHERE status IN ('pending','want')")}
+                    items = pick_batch(conn, cfg)
+                    fresh = next((i for i in items if i["word"] not in before), None)
+                    return self._send(200, json.dumps(
+                        {"ok": True, "word": w, "next": fresh}, ensure_ascii=False))
                 if u.path == "/api/pick":
                     add = [normalize(str(x)) for x in (body.get("add") or [])]
                     skip = [normalize(str(x)) for x in (body.get("skip") or [])]
