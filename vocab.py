@@ -2378,8 +2378,6 @@ h1{font-size:17px;margin:0;font-weight:600;letter-spacing:.02em}
 .tab{padding:6px 11px;border-radius:8px;border:none;background:transparent;color:var(--dim);
   font-size:14px;cursor:pointer;font-family:inherit;white-space:nowrap}
 .tabs{gap:2px}
-#cnt{font-weight:600}
-#cnt.lit{color:var(--accent)}
 .tab.on{background:var(--card);color:var(--fg);box-shadow:var(--shadow)}
 .badge{display:inline-block;min-width:17px;padding:0 5px;margin-left:5px;border-radius:9px;
   background:var(--accent);color:var(--card);font-size:11px;line-height:17px;text-align:center;
@@ -2550,9 +2548,7 @@ u.kw{text-decoration:underline;text-decoration-color:var(--accent);
 .tip:hover::after,.tip.on::after{display:block}
 .pk.zhon.tip:hover::after{display:none}
 .zh{display:none}
-body.show-cn .zh{display:block}
-body.show-cn .tip::after{display:none}
-body.show-cn .tip{cursor:auto}
+/* 中文一律靠悬停/点击浮出，不再整页切换 */
 input[type=password]{width:100%;padding:12px 14px;border-radius:11px;border:1px solid var(--line);
   background:var(--bg);color:var(--fg);font-size:15px;font-family:inherit;margin-top:10px}
 .tab[data-t="set"]{font-size:16px;padding:6px 10px}
@@ -2599,7 +2595,6 @@ body.wordtip .tip:hover::after{display:none}
       <button class="tab" data-t="roots">Roots</button>
       <button class="tab" data-t="news">News</button>
       <button class="tab" data-t="review">Review</button>
-      <button class="tab" id="cnt" title="Show / hide Chinese">ZH</button>
       <button class="tab" data-t="set" title="Settings">⚙</button>
     </div>
   </header>
@@ -2907,29 +2902,13 @@ async function loadSet(){
   };
 }
 
-// 中文默认藏起来：悬停看一眼，点一下钉住，右上角「中」永久显示
-(function(){
-  const btn=$("#cnt");
-  const set=on=>{
-    document.body.classList.toggle("show-cn",on);
-    btn.classList.toggle("lit",on);
-    btn.textContent="ZH";
-    btn.title=on?"Click to hide Chinese":"Click to keep Chinese visible";
-  };
-  set(localStorage.getItem("showcn")==="1");
-  btn.onclick=()=>{
-    const on=!document.body.classList.contains("show-cn");
-    localStorage.setItem("showcn",on?"1":"0");
-    set(on);
-  };
-  document.addEventListener("click",e=>{
-    const t=e.target.closest(".tip");
-    if(document.body.classList.contains("show-cn")) return;
-    if(t && (t.closest(".nhead") || t.classList.contains("pk"))) return;
-    document.querySelectorAll(".tip.on").forEach(x=>{ if(x!==t) x.classList.remove("on"); });
-    if(t) t.classList.toggle("on");
-  });
-})();
+// 中文靠悬停浮出；手机上点一下钉住，再点别处收起
+document.addEventListener("click",e=>{
+  const t=e.target.closest(".tip");
+  if(t && (t.closest(".nhead") || t.classList.contains("pk"))) return;
+  document.querySelectorAll(".tip.on").forEach(x=>{ if(x!==t) x.classList.remove("on"); });
+  if(t) t.classList.toggle("on");
+});
 
 // 双击任何单词 = 复制它
 function toast(msg){
