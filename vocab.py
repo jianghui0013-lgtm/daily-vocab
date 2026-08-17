@@ -1482,10 +1482,16 @@ def cmd_watch(args, cfg):
                         notify("生词本", "今天的 %d 条科技商业新闻到了" % got, cfg)
             except Exception as e:
                 print(dim("  新闻抓取出错: %s" % e))
-        # 词根分析，一次一批
+        # 词根分析 + 同根词族，一次一批
         if cfg.get("api_key") and tick % 30 == 0:
             try:
-                roots_analyze(conn, cfg, 20)
+                if not roots_analyze(conn, cfg, 20):
+                    todo = [r[0] for r in conn.execute(
+                        "SELECT DISTINCT wr.root FROM word_root wr"
+                        " LEFT JOIN root_family f ON f.root = wr.root"
+                        " WHERE wr.root != '' AND f.root IS NULL LIMIT 12")]
+                    if todo and root_family_fill(conn, cfg, todo):
+                        print("  %s %d 组" % (green("词族"), len(todo)))
             except Exception as e:
                 print(dim("  词根分析出错: %s" % e))
         # 新闻摘要，一次一条
@@ -1849,7 +1855,7 @@ def root_related(conn, root, exclude, limit=10):
     return out
 
 
-def roots_view(conn, cfg, min_words=2):
+def roots_view(conn, cfg, min_words=1):
     """按词根分组：每组挂你库里的同根词 + 词典里的关联词。"""
     groups = {}
     for r in conn.execute(
@@ -1863,7 +1869,6 @@ def roots_view(conn, cfg, min_words=2):
     known |= {x[0] for x in conn.execute("SELECT word FROM inbox")}
     known |= {x[0] for x in conn.execute("SELECT word FROM pick WHERE status='skipped'")}
     keep = [g for g in groups.values() if len(g["mine"]) >= min_words]
-    root_family_fill(conn, cfg, [g["root"] for g in keep])
     out = []
     for g in keep:
         g["related"] = root_related(conn, g["root"], known)
@@ -2988,14 +2993,14 @@ async function loadRoots(){
   const gs = r.groups || [];
   if(!gs.length){
     el.innerHTML = `<div class="empty">${r.pending && r.has_key
-      ? `Working out the roots of your ${r.pending} words…`
+      ? `Working out the roots of your words…`
       : "No shared roots yet — collect a few more words."}</div>`;
     if(r.pending && r.has_key) setTimeout(()=>{ if(tab==="roots") loadRoots(); }, 12000);
     return;
   }
   el.innerHTML =
     `<div class="count">${gs.length} roots across your words${
-      r.pending ? ` · ${r.pending} still being analysed` : ""}</div>
+      r.pending ? ` · ${r.pending} still filling in` : ""}</div>
      ${gs.map(g => `
        <div class="rt${openRoots.has(g.root) ? " open" : ""}" data-r="${esc(g.root)}">
          <div class="rthead" onclick="toggleRoot(this.parentNode)">
@@ -3422,11 +3427,13 @@ def make_handler(cfg, token):
                         "SELECT DISTINCT lemma FROM words WHERE lemma != ''")]
                     return self._send(200, json.dumps({"words": sorted(set(ws))}))
                 if u.path == "/api/roots":
+                    gs = roots_view(conn, cfg)
                     pend = conn.execute(
                         "SELECT COUNT(*) FROM words w LEFT JOIN word_root r"
                         " ON r.word = w.word WHERE r.word IS NULL").fetchone()[0]
+                    pend += sum(1 for g in gs if not g["related"])
                     return self._send(200, json.dumps(
-                        {"groups": roots_view(conn, cfg), "pending": pend,
+                        {"groups": gs, "pending": pend,
                          "has_key": bool(cfg.get("api_key"))}, ensure_ascii=False))
                 if u.path == "/api/pick":
                     return self._send(200, json.dumps(
@@ -3863,7 +3870,7 @@ def main():
 
     rt = sub.add_parser("roots", help="按词根把词库串起来")
     rt.add_argument("--analyze", action="store_true", help="给还没分析的词跑词根分析")
-    rt.add_argument("--min", type=int, default=2, help="至少几个同根词才成组")
+    rt.add_argument("--min", type=int, default=1, help="至少几个同根词才成组")
     rt.set_defaults(func=cmd_roots)
 
     pk = sub.add_parser("pick", help="推荐词")
