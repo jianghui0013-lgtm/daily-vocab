@@ -1678,7 +1678,8 @@ def pick_batch(conn, cfg, size=None):
     size = size or int(cfg.get("pick_size", 50))
     day = datetime.now().strftime("%Y-%m-%d")
     rows = conn.execute(
-        "SELECT word FROM pick WHERE status = 'pending' ORDER BY rowid").fetchall()
+        "SELECT word, status FROM pick WHERE status IN ('pending','want')"
+        " ORDER BY rowid").fetchall()
     need = size - len(rows)
     if need > 0:
         d = dict_db()
@@ -1721,14 +1722,16 @@ def pick_batch(conn, cfg, size=None):
                     " VALUES (?,?,'pending',?)", (w, day, now_iso()))
             conn.commit()
         rows = conn.execute(
-            "SELECT word FROM pick WHERE status = 'pending' ORDER BY rowid").fetchall()
+            "SELECT word, status FROM pick WHERE status IN ('pending','want')"
+            " ORDER BY rowid").fetchall()
 
     out = []
     for r in rows[:size]:
         e = dict_lookup(r[0]) or {}
         out.append({"word": r[0], "phonetic": e.get("phonetic") or "",
                     "en": e.get("definition_en") or "",
-                    "zh": e.get("definition") or ""})
+                    "zh": e.get("definition") or "",
+                    "selected": r[1] == "want"})
     return out
 
 
@@ -2701,7 +2704,7 @@ async function loadPick(){
   const el = $("#pick");
   const r = await api("/api/pick");
   const items = r.items || [];
-  pickSel = new Set();
+  pickSel = new Set(items.filter(i => i.selected).map(i => i.word));
   if(!items.length){
     el.innerHTML = `<div class="empty">Nothing left to recommend.</div>`;
     return;
@@ -2709,25 +2712,26 @@ async function loadPick(){
   el.innerHTML =
     `<div class="count">Tap the ones you want to learn · ${items.length} words</div>
      <div class="pkgrid">${items.map(it => `
-       <div class="pk${it.zh ? " tip" : ""}"${it.zh ? ` data-zh="${esc(it.zh)}"` : ""}
+       <div class="pk${it.selected ? " sel" : ""}${it.zh ? " tip" : ""}"${it.zh ? ` data-zh="${esc(it.zh)}"` : ""}
             data-w="${esc(it.word)}" onclick="togglePick(this)">
          <div class="pkw"><span class="wt">${esc(it.word)}</span>${
            it.phonetic ? `<span class="ph">${esc(it.phonetic)}</span>` : ""}</div>
          <div class="pke">${esc(it.en)}</div>
        </div>`).join("")}</div>
      <div class="pkbar">
-       <button class="pkgo" id="pkgo" onclick="commitPick(true)">Add 0 · skip the rest</button>
+       <button class="pkgo" id="pkgo" onclick="commitPick(true)">Add ${pickSel.size} · skip the rest</button>
        <button class="pkskip" onclick="commitPick(false)">Skip all ${items.length}</button>
      </div>`;
 }
 
 window.togglePick = el => {
   const w = el.dataset.w;
-  if(pickSel.has(w)){ pickSel.delete(w); el.classList.remove("sel"); }
-  else { pickSel.add(w); el.classList.add("sel"); }
+  const on = !pickSel.has(w);
+  if(on){ pickSel.add(w); el.classList.add("sel"); }
+  else { pickSel.delete(w); el.classList.remove("sel"); }
   const b = $("#pkgo");
-  if(b) b.textContent = pickSel.size
-    ? `Add ${pickSel.size} · skip the rest` : "Add 0 · skip the rest";
+  if(b) b.textContent = `Add ${pickSel.size} · skip the rest`;
+  post("/api/pick/select", {word: w, on});      // 立刻存下，刷新后还在
 };
 
 window.commitPick = async keep => {
@@ -3173,9 +3177,22 @@ def make_handler(cfg, token):
                     return self._send(200, json.dumps(
                         {"ok": True, "added": added, "bumped": sorted(set(bumped)),
                          "skipped": reason}, ensure_ascii=False))
+                if u.path == "/api/pick/select":
+                    w = normalize(str(body.get("word") or ""))
+                    on = bool(body.get("on"))
+                    conn.execute("UPDATE pick SET status=? WHERE word=?"
+                                 " AND status IN ('pending','want')",
+                                 ("want" if on else "pending", w))
+                    conn.commit()
+                    n = conn.execute(
+                        "SELECT COUNT(*) FROM pick WHERE status='want'").fetchone()[0]
+                    return self._send(200, json.dumps({"ok": True, "selected": n}))
                 if u.path == "/api/pick":
                     add = [normalize(str(x)) for x in (body.get("add") or [])]
                     skip = [normalize(str(x)) for x in (body.get("skip") or [])]
+                    if body.get("use_saved"):
+                        add = [r[0] for r in conn.execute(
+                            "SELECT word FROM pick WHERE status='want'")]
                     added = 0
                     for w in add:
                         if not w:
