@@ -45,6 +45,7 @@ DEFAULT_CFG = {
     "lan_token": "",          # 手机访问用的固定口令，首次开 --lan 时自动生成
     "news_hour": 6,           # 每天几点抓（本地时间，24 小时制）
     "news_count": 10,         # 每天抓几条
+    "pick_size": 50,          # 一批推荐几个词
 }
 
 
@@ -251,6 +252,14 @@ CREATE TABLE IF NOT EXISTS news (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_news_day ON news(day);
+
+CREATE TABLE IF NOT EXISTS pick (
+  word       TEXT PRIMARY KEY,
+  day        TEXT NOT NULL,
+  status     TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_pick_status ON pick(status, day);
 """
 
 
@@ -1022,7 +1031,8 @@ def dict_import(csv_path, quiet=False):
       PRAGMA synchronous = OFF;
       CREATE TABLE dict (
         word TEXT PRIMARY KEY, lemma TEXT, phonetic TEXT, translation TEXT,
-        en TEXT, pos TEXT, collins INTEGER, frq INTEGER, bnc INTEGER);
+        en TEXT, pos TEXT, tag TEXT, collins INTEGER, frq INTEGER, bnc INTEGER);
+      CREATE INDEX IF NOT EXISTS idx_dict_tag ON dict(tag);
     """)
     n, batch = 0, []
     with open(csv_path, encoding="utf-8", errors="ignore") as f:
@@ -1054,14 +1064,15 @@ def dict_import(csv_path, quiet=False):
             en = " · ".join(senses)
             batch.append((w, lemma or w, (row.get("phonetic") or "").strip(),
                           tr.replace("\\n", "; "), en, (row.get("pos") or "").strip(),
+                          (row.get("tag") or "").strip(),
                           _i("collins"), _i("frq"), _i("bnc")))
             if len(batch) >= 5000:
-                out.executemany("INSERT OR REPLACE INTO dict VALUES (?,?,?,?,?,?,?,?,?)", batch)
+                out.executemany("INSERT OR REPLACE INTO dict VALUES (?,?,?,?,?,?,?,?,?,?)", batch)
                 n += len(batch); batch = []
                 if not quiet and n % 100000 == 0:
                     print(dim("  已导入 %d 条…" % n), end="\r", flush=True)
     if batch:
-        out.executemany("INSERT OR REPLACE INTO dict VALUES (?,?,?,?,?,?,?,?,?)", batch)
+        out.executemany("INSERT OR REPLACE INTO dict VALUES (?,?,?,?,?,?,?,?,?,?)", batch)
         n += len(batch)
     out.execute("CREATE INDEX idx_dict_lemma ON dict(lemma)")
     out.commit()
@@ -1656,6 +1667,85 @@ def cmd_examples(args, cfg):
     return 0
 
 
+# ---------------------------------------------------------------- 推荐词
+
+PICK_FRQ_LO = 5500        # 比这更常见的词，你多半已经会了
+PICK_FRQ_HI = 22000       # 比这更冷僻的，学了用不上
+
+
+def pick_batch(conn, cfg, size=None):
+    """凑够今天要推荐的一批词。已收藏、已跳过、已推过的都不再出现。"""
+    size = size or int(cfg.get("pick_size", 50))
+    day = datetime.now().strftime("%Y-%m-%d")
+    rows = conn.execute(
+        "SELECT word FROM pick WHERE status = 'pending' ORDER BY rowid").fetchall()
+    need = size - len(rows)
+    if need > 0:
+        d = dict_db()
+        if d:
+            try:
+                used = {r[0] for r in conn.execute("SELECT word FROM pick")}
+                used |= {r[0] for r in conn.execute("SELECT word FROM words")}
+                used |= {r[0] for r in conn.execute("SELECT word FROM inbox")}
+                has_tag = [r[1] for r in d.execute("PRAGMA table_info(dict)")]
+                if "tag" in has_tag:
+                    # 优先出考试大纲里的词（六级/考研/托福/雅思/GRE），比按词频瞎抽准得多
+                    cand = d.execute(
+                        "SELECT word FROM dict"
+                        " WHERE lemma = word AND translation != '' AND en != ''"
+                        "   AND (tag LIKE '%cet6%' OR tag LIKE '%ky%'"
+                        "        OR tag LIKE '%toefl%' OR tag LIKE '%ielts%'"
+                        "        OR tag LIKE '%gre%')"
+                        "   AND frq BETWEEN ? AND ?"
+                        " ORDER BY RANDOM() LIMIT ?",
+                        (PICK_FRQ_LO, PICK_FRQ_HI, need * 4)).fetchall()
+                else:
+                    cand = d.execute(
+                        "SELECT word FROM dict"
+                        " WHERE lemma = word AND translation != '' AND en != ''"
+                        "   AND frq BETWEEN ? AND ?"
+                        " ORDER BY RANDOM() LIMIT ?",
+                        (PICK_FRQ_LO, PICK_FRQ_HI, need * 4)).fetchall()
+            finally:
+                d.close()
+            fresh = []
+            for r in cand:
+                if r[0] in used or r[0] in fresh:
+                    continue
+                fresh.append(r[0])
+                if len(fresh) >= need:
+                    break
+            for w in fresh:
+                conn.execute(
+                    "INSERT OR IGNORE INTO pick (word, day, status, created_at)"
+                    " VALUES (?,?,'pending',?)", (w, day, now_iso()))
+            conn.commit()
+        rows = conn.execute(
+            "SELECT word FROM pick WHERE status = 'pending' ORDER BY rowid").fetchall()
+
+    out = []
+    for r in rows[:size]:
+        e = dict_lookup(r[0]) or {}
+        out.append({"word": r[0], "phonetic": e.get("phonetic") or "",
+                    "en": e.get("definition_en") or "",
+                    "zh": e.get("definition") or ""})
+    return out
+
+
+def cmd_pick(args, cfg):
+    conn = db()
+    if args.reset:
+        n = conn.execute("DELETE FROM pick WHERE status = 'pending'").rowcount
+        conn.commit()
+        print(dim("  清掉 %d 个待选的，重新出题" % n))
+    items = pick_batch(conn, cfg, args.size)
+    print(dim("  今天推荐 %d 个词：" % len(items)))
+    for i, it in enumerate(items, 1):
+        print("  %2d. %-16s %-14s %s" % (i, it["word"], it["phonetic"],
+                                         (it["en"] or it["zh"])[:46]))
+    return 0
+
+
 # ---------------------------------------------------------------- 商业新闻
 
 # 科技类商业新闻
@@ -2113,6 +2203,29 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
   text-overflow:ellipsis;white-space:nowrap}
 .sgs{font-size:10.5px;color:var(--accent);border:1px solid var(--accent);
   border-radius:5px;padding:0 4px;flex:none}
+.pkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;
+  margin-bottom:76px}
+.pk{background:var(--card);border:1px solid var(--line);border-radius:11px;
+  padding:11px 13px;cursor:pointer;box-shadow:var(--shadow);position:relative;
+  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.pk:hover{border-color:var(--dim)}
+.pk.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.pk.sel::before{content:"✓";position:absolute;right:9px;top:8px;color:var(--accent);
+  font-weight:700;font-size:13px}
+.pkw{font-size:16px;font-weight:600;display:flex;align-items:baseline;gap:7px}
+.pke{font-size:12.5px;color:var(--dim);margin-top:3px;line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  height:calc(2 * 1.45 * 12.5px)}
+.pkbar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;gap:9px;
+  justify-content:center;padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+.pkgo{padding:11px 22px;border-radius:10px;border:none;background:var(--accent);
+  color:var(--card);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+.pkgo:disabled{opacity:.5}
+.pkskip{padding:11px 18px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);color:var(--dim);font-size:14px;cursor:pointer;font-family:inherit}
+.pkskip:hover{color:var(--bad);border-color:var(--bad)}
 .pager{display:flex;gap:5px;justify-content:center;margin:18px 0 4px;flex-wrap:wrap}
 .pg{min-width:32px;padding:6px 9px;border-radius:8px;border:1px solid var(--line);
   background:var(--card);color:var(--fg);font-size:13px;cursor:pointer;font-family:inherit}
@@ -2199,6 +2312,7 @@ body.wordtip .tip:hover::after{display:none}
     <h1>Vocab</h1>
     <div class="tabs">
       <button class="tab on" data-t="all">Words</button>
+      <button class="tab" data-t="pick">Pick</button>
       <button class="tab" data-t="news">News</button>
       <button class="tab" data-t="review">Review</button>
       <button class="tab" id="cnt" title="Show / hide Chinese">ZH</button>
@@ -2206,6 +2320,7 @@ body.wordtip .tip:hover::after{display:none}
     </div>
   </header>
   <div id="all"></div>
+  <div id="pick" class="hidden"></div>
   <div id="news" class="hidden"></div>
   <div id="review" class="hidden"></div>
   <div id="set" class="hidden"></div>
@@ -2224,7 +2339,7 @@ const post=(p,b)=>api(p,{method:"POST",headers:{"Content-Type":"application/json
 const esc=s=>(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 let tab="all", Q=[], qi=0, flipped=false;
-const TABS=["all","news","review","set"];
+const TABS=["all","pick","news","review","set"];
 
 function activate(t){
   if(!TABS.includes(t)) t="all";
@@ -2235,6 +2350,7 @@ function activate(t){
     x=>x.classList.toggle("on", x.dataset.t===t));
   TABS.forEach(x=>$("#"+x).classList.toggle("hidden", x!==t));
   if(t==="all") loadAll("");
+  if(t==="pick") loadPick();
   if(t==="news") loadNews();
   if(t==="review") loadQueue();
   if(t==="set") loadSet();
@@ -2495,7 +2611,7 @@ async function loadSet(){
   document.addEventListener("click",e=>{
     const t=e.target.closest(".tip");
     if(document.body.classList.contains("show-cn")) return;
-    if(t && t.closest(".nhead")) return;      // 新闻标题只在悬停时显示，别钉住挡正文
+    if(t && (t.closest(".nhead") || t.classList.contains("pk"))) return;
     document.querySelectorAll(".tip.on").forEach(x=>{ if(x!==t) x.classList.remove("on"); });
     if(t) t.classList.toggle("on");
   });
@@ -2576,6 +2692,53 @@ window.forget=async(id,ev)=>{
     const c = document.querySelector("#review .count");
     if(c) c.firstChild.textContent = ` ${n} random words `;
   }
+};
+
+// ---------- 推荐词：挑你想学的，剩下的一键不再出现
+let pickSel = new Set();
+
+async function loadPick(){
+  const el = $("#pick");
+  const r = await api("/api/pick");
+  const items = r.items || [];
+  pickSel = new Set();
+  if(!items.length){
+    el.innerHTML = `<div class="empty">Nothing left to recommend.</div>`;
+    return;
+  }
+  el.innerHTML =
+    `<div class="count">Tap the ones you want to learn · ${items.length} words</div>
+     <div class="pkgrid">${items.map(it => `
+       <div class="pk${it.zh ? " tip" : ""}"${it.zh ? ` data-zh="${esc(it.zh)}"` : ""}
+            data-w="${esc(it.word)}" onclick="togglePick(this)">
+         <div class="pkw"><span class="wt">${esc(it.word)}</span>${
+           it.phonetic ? `<span class="ph">${esc(it.phonetic)}</span>` : ""}</div>
+         <div class="pke">${esc(it.en)}</div>
+       </div>`).join("")}</div>
+     <div class="pkbar">
+       <button class="pkgo" id="pkgo" onclick="commitPick(true)">Add 0 · skip the rest</button>
+       <button class="pkskip" onclick="commitPick(false)">Skip all ${items.length}</button>
+     </div>`;
+}
+
+window.togglePick = el => {
+  const w = el.dataset.w;
+  if(pickSel.has(w)){ pickSel.delete(w); el.classList.remove("sel"); }
+  else { pickSel.add(w); el.classList.add("sel"); }
+  const b = $("#pkgo");
+  if(b) b.textContent = pickSel.size
+    ? `Add ${pickSel.size} · skip the rest` : "Add 0 · skip the rest";
+};
+
+window.commitPick = async keep => {
+  const all = [...document.querySelectorAll("#pick .pk")].map(x => x.dataset.w);
+  const add = keep ? [...pickSel] : [];
+  const skip = all.filter(w => !add.includes(w));
+  const btn = $("#pkgo");
+  if(btn){ btn.disabled = true; btn.textContent = "working…"; }
+  const r = await post("/api/pick", {add, skip});
+  toast(r && r.added ? `${r.added} words added to your list` : "new batch");
+  loadPick();
 };
 
 // ---------- 新闻
@@ -2895,6 +3058,9 @@ def make_handler(cfg, token):
                         "zh": d.get("definition") or "",
                         "en": d.get("definition_en") or "",
                     }, ensure_ascii=False))
+                if u.path == "/api/pick":
+                    return self._send(200, json.dumps(
+                        {"items": pick_batch(conn, cfg)}, ensure_ascii=False))
                 if u.path == "/api/news":
                     rows = conn.execute(
                         "SELECT * FROM news ORDER BY day DESC, published DESC LIMIT 60"
@@ -3007,6 +3173,28 @@ def make_handler(cfg, token):
                     return self._send(200, json.dumps(
                         {"ok": True, "added": added, "bumped": sorted(set(bumped)),
                          "skipped": reason}, ensure_ascii=False))
+                if u.path == "/api/pick":
+                    add = [normalize(str(x)) for x in (body.get("add") or [])]
+                    skip = [normalize(str(x)) for x in (body.get("skip") or [])]
+                    added = 0
+                    for w in add:
+                        if not w:
+                            continue
+                        conn.execute(
+                            "UPDATE pick SET status='added' WHERE word=?", (w,))
+                        if find_word(conn, w):
+                            continue
+                        e = dict_lookup(w) or {}
+                        insert_word(conn, e.get("lemma") or w, e, w, "", "推荐")
+                        added += 1
+                    for w in skip:
+                        if w:
+                            conn.execute(
+                                "UPDATE pick SET status='skipped' WHERE word=?", (w,))
+                    conn.commit()
+                    return self._send(200, json.dumps(
+                        {"ok": True, "added": added,
+                         "items": pick_batch(conn, cfg)}, ensure_ascii=False))
                 if u.path == "/api/news/fetch":
                     day = datetime.now().strftime("%Y-%m-%d")
                     have = conn.execute("SELECT COUNT(*) FROM news WHERE day = ?",
@@ -3279,6 +3467,11 @@ def main():
     ip = sub.add_parser("import", help="从 JSON 导回词库")
     ip.add_argument("path")
     ip.set_defaults(func=cmd_import)
+
+    pk = sub.add_parser("pick", help="推荐词")
+    pk.add_argument("-n", "--size", type=int, default=None)
+    pk.add_argument("--reset", action="store_true", help="换一批")
+    pk.set_defaults(func=cmd_pick)
 
     nw = sub.add_parser("news", help="每天的英文商业新闻")
     nw.add_argument("--fetch", action="store_true", help="立刻抓一次")
