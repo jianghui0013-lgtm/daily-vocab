@@ -280,6 +280,7 @@ CREATE TABLE IF NOT EXISTS scene (
   zh         TEXT,
   seeds      TEXT,
   news       TEXT,
+  source     TEXT,
   created_at TEXT NOT NULL
 );
 
@@ -324,6 +325,10 @@ def db():
             DROP TABLE word_root_old;
             CREATE INDEX IF NOT EXISTS idx_word_root ON word_root(root);
         """)
+        conn.commit()
+    scols = [r[1] for r in conn.execute("PRAGMA table_info(scene)")]
+    if scols and "source" not in scols:
+        conn.execute("ALTER TABLE scene ADD COLUMN source TEXT")
         conn.commit()
     fcols = [r[1] for r in conn.execute("PRAGMA table_info(root_family)")]
     for c in ("origin", "story", "items"):
@@ -1764,17 +1769,27 @@ SCENE_SYSTEM = ("你是一位英语阅读材料作者，服务对象是%s，他�
 
 SCENE_USER = """这几个词是他已经掌握的：{seeds}
 
-写一段科技或商业场景的英文短文，把这些词自然地用进去 —— 它们是他熟悉的落脚点。
-同时**引入 {n} 个他大概率还不认识的新词**（六级/托福/GRE 水平，科技商业语境里真实常用）。
-新词要放在上下文能猜出大意的位置，别堆在一起。
+写一段**本身就值得一读**的英文短文，把这些词自然地用进去 —— 它们是他熟悉的落脚点。
+同时引入 {n} 个他大概率还不认识的新词（六级/托福/GRE 水平，科技商业语境里真实常用），
+放在上下文能猜出大意的位置。
 
-要求：
-- 120-160 词，是一个完整的小场景（融资、发布会、裁员、财报、收购、监管调查之类），不是散句
-- 句子结构不要太长，一句话讲一件事
-- 新词必须是短文里真实出现过的原形或变形
+内容必须有实质价值，从下面挑一种：
+- 某本商业/科技经典里的一个观点，如 Zero to One 的垄断论、The Innovator's Dilemma
+  的颠覆理论、Thinking, Fast and Slow 的系统一系统二、Poor Charlie's Almanack 的多元思维模型
+- 一个真实发生过的商业案例（柯达错过数码、Netflix 转型流媒体、诺基亚的失守之类）
+- 一个值得理解的商业或技术概念（网络效应、护城河、边际成本趋零、规模不经济）
+
+**取材自书或他人观点时，必须用你自己的话重述，绝对不要引用原文句子。**
+在 source 里写明出处，如 "Zero to One — Peter Thiel"；纯属通用场景就留空。
+
+其它要求：
+- 120-170 词，一段完整的意思，读完能有收获，不是造句练习
+- 句子别太长，一句话讲一件事
+- 新词必须在短文里真实出现过
 
 返回：
 {{"title": "5 词以内的英文小标题",
+  "source": "出处，没有就空字符串",
   "body": "英文短文",
   "zh": "整段的中文翻译",
   "new_words": [{{"word": "新词原形", "zh": "中文释义", "why": "它在这段里指什么，一句话"}}]}}"""
@@ -1816,9 +1831,10 @@ def scene_make(conn, cfg, quiet=True):
         return None
     news = [x for x in (d.get("new_words") or []) if isinstance(x, dict) and x.get("word")]
     cur = conn.execute(
-        "INSERT INTO scene (title, body, zh, seeds, news, created_at)"
-        " VALUES (?,?,?,?,?,?)",
-        (str(d.get("title") or "")[:80], d["body"], str(d.get("zh") or ""),
+        "INSERT INTO scene (title, source, body, zh, seeds, news, created_at)"
+        " VALUES (?,?,?,?,?,?,?)",
+        (str(d.get("title") or "")[:80], str(d.get("source") or "")[:120],
+         d["body"], str(d.get("zh") or ""),
          json.dumps(seeds, ensure_ascii=False),
          json.dumps(news, ensure_ascii=False), now_iso()))
     conn.commit()
@@ -1837,7 +1853,7 @@ def scenes_list(conn, limit=12):
         for x in news:
             x["saved"] = normalize(str(x.get("word") or "")) in have
         out.append({"id": r["id"], "title": r["title"], "body": r["body"],
-                    "zh": r["zh"], "news": news,
+                    "source": r["source"] or "", "zh": r["zh"], "news": news,
                     "seeds": json.loads(r["seeds"] or "[]"),
                     "day": (r["created_at"] or "")[:10]})
     return out
@@ -2626,6 +2642,8 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
   padding:16px 18px;margin-bottom:10px;box-shadow:var(--shadow)}
 .schead{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
 .schead b{font-size:17px;font-weight:600}
+.scsrc{font-size:12px;color:var(--accent);border:1px solid var(--accent);
+  border-radius:6px;padding:1px 7px}
 .scbody{font-size:15.5px;line-height:1.85;margin:0 0 4px;max-width:68ch}
 .scnew{border-bottom:1.5px dashed var(--warn);cursor:pointer}
 .rt{background:var(--card);border:1px solid var(--line);border-radius:11px;
@@ -3223,7 +3241,9 @@ async function loadScenes(){
        ${r.has_key ? `<a class="lk" style="margin-left:10px" onclick="newScene(this)">new scene</a>` : ""}</div>
      ${scs.map(s => `
        <div class="sc">
-         <div class="schead"><b>${esc(s.title || "Scene")}</b><span class="npub">${esc(s.day)}</span></div>
+         <div class="schead"><b>${esc(s.title || "Scene")}</b>${
+           s.source ? `<span class="scsrc">${esc(s.source)}</span>` : ""}
+           <span class="npub">${esc(s.day)}</span></div>
          <p class="scbody">${sceneHTML(s)}</p>
          ${s.zh ? `<div class="rtlab tip" data-zh="${esc(s.zh)}">hover for the Chinese</div>` : ""}
          ${s.news.length ? `<div class="rtlab">New words here — double-click to add</div>
@@ -3250,10 +3270,15 @@ function sceneHTML(s){
 }
 
 window.newScene = async el => {
-  const old = el.textContent; el.textContent = "writing…";
-  await post("/api/scenes/new", {});
-  el.textContent = old;
-  loadScenes();
+  const old = el.textContent;
+  for(let i = 1; i <= 5; i++){                 // 一次写 5 段，写好一段冒一段
+    const a = $("#scenes .lk");
+    if(a) a.textContent = `writing ${i}/5…`;
+    await post("/api/scenes/new", {});
+    await loadScenes();
+  }
+  const a = $("#scenes .lk");
+  if(a) a.textContent = old;
 };
 
 // ---------- 词根：只列词根，点开才展开
