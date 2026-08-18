@@ -2646,6 +2646,7 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
   border-radius:6px;padding:1px 7px}
 .scbody{font-size:15.5px;line-height:1.85;margin:0 0 4px;max-width:68ch}
 .scnew{border-bottom:1.5px dashed var(--warn);cursor:pointer}
+.sctaken{border-bottom:1.5px solid var(--accent)}
 .rt{background:var(--card);border:1px solid var(--line);border-radius:11px;
   margin-bottom:7px;box-shadow:var(--shadow)}   /* 不能 overflow:hidden，会裁掉提示框 */
 .rthead{display:flex;align-items:baseline;gap:11px;padding:12px 15px;cursor:pointer;
@@ -3331,6 +3332,24 @@ window.toggleRoot = el => {
   if(on) openRoots.add(el.dataset.r); else openRoots.delete(el.dataset.r);
 };
 
+// 收进词库后，文章里那个词立刻从「新词虚线」变成「已收实线」
+window.markTaken = w => {
+  const low = String(w || "").toLowerCase();
+  document.querySelectorAll(".scnew").forEach(el => {
+    const t = el.textContent.toLowerCase();
+    if(t === low || kwStems(t).some(x => x === low)){
+      el.classList.remove("scnew");
+      el.classList.add("sctaken");
+    }
+  });
+  document.querySelectorAll("#scenes .famw").forEach(el => {
+    if((el.dataset.w || "").toLowerCase() === low){
+      el.classList.add("mine");
+      el.ondblclick = null;
+    }
+  });
+};
+
 window.addChip = async el => {
   if(el.dataset.busy) return;
   el.dataset.busy = "1";
@@ -3340,6 +3359,7 @@ window.addChip = async el => {
   toast(r && r.merged ? `${w} · already saved` : `${w} · added`);
   loadKnown();
   el.classList.remove("add"); el.classList.add("mine");
+  markTaken(w);
 };
 
 // ---------- 推荐词：点一个就收进词库，原位补一个新的
