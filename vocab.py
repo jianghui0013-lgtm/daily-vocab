@@ -3181,6 +3181,8 @@ document.addEventListener("dblclick",async e=>{
   const r=await post("/api/add",{word:w,copied:true});
   toast(!r ? w : (r.merged ? `${r.word} · already saved · ${r.count}×`
                            : `${r.word} · saved`));
+  loadKnown();
+  markTaken(w);                       // 文中那个词立刻从虚线变实线
   // 不重排列表：你正在读的位置比「新词立刻跳到顶部」重要
   if(tab==="all" && r && r.id) flashRow(r.id);
 });
