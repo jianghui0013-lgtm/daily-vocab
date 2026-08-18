@@ -2804,7 +2804,7 @@ function flashRow(id){
 function rowHTML(w, st){
   return `<div class="row" data-id="${w.id}">
     <div class="cl">
-      <div class="w${w.definition?" tip":""}"${w.definition?` data-zh="${esc(w.definition)}"`:""}><span class="wt rootable" onclick="wordRoot(this)">${esc(w.word)}</span>${w.phonetic?`<span class="ph">${esc(w.phonetic)}</span>`:""}${w.encounter_count>1?`<span class="meta">×${w.encounter_count}</span>`:""}${starHTML(w.id,w.study_count)}</div>
+      <div class="w${w.definition?" tip":""}"${w.definition?` data-zh="${esc(w.definition)}"`:""}><span class="wt${w.has_root?" rootable":""}"${w.has_root?` onclick="wordRoot(this)"`:""}>${esc(w.word)}</span>${w.phonetic?`<span class="ph">${esc(w.phonetic)}</span>`:""}${w.encounter_count>1?`<span class="meta">×${w.encounter_count}</span>`:""}${starHTML(w.id,w.study_count)}</div>
       ${w.definition_en?`<div class="den">${esc(w.definition_en)}</div>`:""}
       ${w.definition?`<div class="d zh">${esc(w.definition)}</div>`:""}
     </div>
@@ -3373,6 +3373,10 @@ def _mask_html(sentence, word):
     return "".join(parts)
 
 
+HAS_ROOT_SQL = ("(SELECT 1 FROM word_root wr WHERE wr.word = w.word"
+                " AND wr.root != '' LIMIT 1) AS has_root")
+
+
 def make_handler(cfg, token):
     from http.server import BaseHTTPRequestHandler
     import html as _html
@@ -3458,7 +3462,8 @@ def make_handler(cfg, token):
                         out = []
                         for r in conn.execute(
                                 "SELECT w.*, r.status, (SELECT sentence FROM contexts c"
-                                " WHERE c.word_id=w.id ORDER BY c.id DESC LIMIT 1) AS sentence"
+                                " WHERE c.word_id=w.id ORDER BY c.id DESC LIMIT 1) AS sentence,"
+                                " " + HAS_ROOT_SQL +
                                 " FROM words w JOIN reviews r ON r.word_id=w.id"
                                 " ORDER BY RANDOM() LIMIT ?", (n_,)):
                             d = dict(r)
@@ -3474,7 +3479,8 @@ def make_handler(cfg, token):
                     pages = max(1, (total + size - 1) // size)
                     page = min(page, pages)
                     sql = ("SELECT w.*, r.status, (SELECT sentence FROM contexts c"
-                           " WHERE c.word_id=w.id ORDER BY c.id DESC LIMIT 1) AS sentence"
+                           " WHERE c.word_id=w.id ORDER BY c.id DESC LIMIT 1) AS sentence,"
+                           " " + HAS_ROOT_SQL +
                            " FROM words w JOIN reviews r ON r.word_id=w.id" + where +
                            " ORDER BY w.updated_at DESC LIMIT ? OFFSET ?")
                     out = []
