@@ -316,7 +316,7 @@ def db():
         """)
         conn.commit()
     fcols = [r[1] for r in conn.execute("PRAGMA table_info(root_family)")]
-    for c in ("origin", "story"):
+    for c in ("origin", "story", "items"):
         if fcols and c not in fcols:
             conn.execute("ALTER TABLE root_family ADD COLUMN %s TEXT" % c)
             conn.commit()
@@ -1515,7 +1515,7 @@ def cmd_watch(args, cfg):
                         "SELECT DISTINCT wr.root FROM word_root wr"
                         " LEFT JOIN root_family f ON f.root = wr.root"
                         " WHERE wr.root != ''"
-                        "   AND (f.root IS NULL OR COALESCE(f.story,'') = '') LIMIT 12")]
+                        "   AND (f.root IS NULL OR COALESCE(f.items,'') = '') LIMIT 12")]
                     if todo and root_family_fill(conn, cfg, todo):
                         print("  %s %d 组" % (green("词族"), len(todo)))
             except Exception as e:
@@ -1824,22 +1824,24 @@ def roots_analyze(conn, cfg, limit=20, quiet=True):
 FAMILY_USER = """这些是英语词根：{roots}
 
 对每个词根，给出：
-1. 来源：一句英文，说明它来自哪个词、什么原意。如 From Latin trahere "to pull".
-2. 延伸讲解：一段中文，讲这个原意怎么长出那些派生词。要具体到拆解，
-   如「con-(共同)+tract → 一起拉住 → 合约；abs-(离开)+tract → 从具体中拉离 → 抽象」。
-   80-140 字，讲清楚意思是怎么转的，别空泛。
-3. 10 个确实由它派生的常用词。只要词源上真同根的
-   （vor「吃」是 carnivore、devour、voracious，不是 favor、ivory 这种碰巧含相同字母的）。
+1. origin：一句英文，说明它来自哪个词、什么原意。如 From Latin trahere "to pull".
+2. words：10 个确实由它派生的常用词，**每个词配一句自己的中文推导**，
+   格式为「前缀(意思) + 词根(意思) → 引申 → 词义」，如
+   con-(共同) + tract(拉) → 一起拉住 → 合约。
+
+只收词源上真同根、且**推导讲得通**的词。
+碰巧含相同字母的（favor 之于 vor、ivory 之于 vor）不要收；
+推导要靠硬凑才成立的也不要收，宁可少给几个。
 
 返回：
 {{"items": [{{"root": "词根", "origin": "英文来源一句话",
-              "story": "中文延伸讲解", "words": "逗号分隔的 10 个单词"}}]}}"""
+   "words": [{{"word": "contract", "why": "con-(共同) + tract(拉) → 一起拉住 → 合约"}}]}}]}}"""
 
 
 def root_family_fill(conn, cfg, roots, quiet=True):
     """让 AI 给出真正同根的词族——字符串匹配会把 favor 算成 vor 的同根词。"""
     todo = [r for r in roots if not conn.execute(
-        "SELECT 1 FROM root_family WHERE root = ? AND COALESCE(story,'') != ''",
+        "SELECT 1 FROM root_family WHERE root = ? AND COALESCE(items,'') != ''",
         (r,)).fetchone()]
     if not todo or not cfg.get("api_key"):
         return 0
@@ -1871,29 +1873,40 @@ def root_family_fill(conn, cfg, roots, quiet=True):
     n = 0
     for r in todo:
         it = got.get(r) or {}
+        ws = it.get("words")
+        ws = ws if isinstance(ws, list) else []
+        clean = [{"word": normalize(str(x.get("word") or "")),
+                  "why": str(x.get("why") or "").strip()}
+                 for x in ws if isinstance(x, dict) and x.get("word")]
         conn.execute(
-            "INSERT OR REPLACE INTO root_family (root, words, origin, story, created_at)"
-            " VALUES (?,?,?,?,?)",
-            (r, str(it.get("words") or ""), str(it.get("origin") or ""),
-             str(it.get("story") or ""), now_iso()))
+            "INSERT OR REPLACE INTO root_family (root, items, origin, created_at)"
+            " VALUES (?,?,?,?)",
+            (r, json.dumps(clean, ensure_ascii=False), str(it.get("origin") or ""),
+             now_iso()))
         n += 1
     conn.commit()
     return n
 
 
 def root_related(conn, root, exclude, limit=10):
-    """同根词族里，你还没收的那些。词形以离线词典为准，AI 编的假词会被剔掉。"""
-    row = conn.execute("SELECT words FROM root_family WHERE root = ?", (root,)).fetchone()
+    """同根词族里你还没收的那些，每个带自己的推导。查不到词形的（AI 编的）剔掉。"""
+    row = conn.execute("SELECT items FROM root_family WHERE root = ?", (root,)).fetchone()
     if not row or not row[0]:
         return []
+    try:
+        items = json.loads(row[0])
+    except Exception:
+        return []
     out = []
-    for w in [normalize(x) for x in row[0].split(",")]:
+    for it in items:
+        w = normalize(str(it.get("word") or ""))
         if not w or w in exclude or any(o["word"] == w for o in out):
             continue
         e = dict_lookup(w)
         if not e or not e.get("definition"):
-            continue                       # 词典里查不到就是 AI 编的，丢掉
-        out.append({"word": w, "zh": (e.get("definition") or "")[:40]})
+            continue
+        out.append({"word": w, "why": it.get("why") or "",
+                    "zh": (e.get("definition") or "")[:40]})
         if len(out) >= limit:
             break
     return out
@@ -1916,10 +1929,9 @@ def roots_view(conn, cfg, min_words=1):
     out = []
     for g in keep:
         g["related"] = root_related(conn, g["root"], known)
-        f = conn.execute("SELECT origin, story FROM root_family WHERE root = ?",
+        f = conn.execute("SELECT origin FROM root_family WHERE root = ?",
                          (g["root"],)).fetchone()
         g["origin"] = (f["origin"] if f else "") or ""
-        g["story"] = (f["story"] if f else "") or ""
         out.append(g)
     out.sort(key=lambda x: -len(x["mine"]))
     return out
@@ -2516,6 +2528,13 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
 .chip.mine{border-color:var(--accent);color:var(--accent)}
 .chip.add{color:var(--dim);cursor:pointer;border-style:dashed}
 .chip.add:hover{color:var(--fg);border-color:var(--dim)}
+.fam{display:flex;flex-direction:column;gap:1px}
+.famw{display:flex;gap:12px;align-items:baseline;padding:5px 8px;border-radius:7px;
+  cursor:pointer;position:relative}
+.famw:hover{background:var(--bg)}
+.famw b{font-size:14.5px;font-weight:600;flex:0 0 auto;min-width:112px}
+.famw span{font-size:13px;color:var(--dim);line-height:1.5}
+.famw.mine b{color:var(--accent)}
 .pkgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
 @media (max-width:880px){ .pkgrid{grid-template-columns:repeat(2,1fr)} }
 @media (max-width:560px){ .pkgrid{grid-template-columns:1fr} }
@@ -2825,16 +2844,12 @@ window.wordRoot = el => {
         : `${d.breakdown ? `<div class="wrbd">${esc(d.breakdown)}</div>` : ""}
            ${rs.map(g => `<div class="wrblock">
              <div class="wrhead"><b>${esc(g.root)}</b><span class="rtm">${esc(g.meaning)}</span></div>
-             ${g.origin || g.story ? `<div class="rtstory">
-               ${g.origin ? `<div class="rtorig">${esc(g.origin)}</div>` : ""}
-               ${g.story ? `<div class="rtsy">${esc(g.story)}</div>` : ""}</div>` : ""}
+             ${g.origin ? `<div class="rtorig">${esc(g.origin)}</div>` : ""}
              ${g.mine.length ? `<div class="rtlab">Also in your list</div>
                <div class="chips">${g.mine.map(x =>
                  `<span class="chip mine">${esc(x)}</span>`).join("")}</div>` : ""}
              ${g.related.length ? `<div class="rtlab">Same root — double-click to add</div>
-               <div class="chips">${g.related.map(x =>
-                 `<span class="chip add tip" data-zh="${esc(x.zh)}" data-w="${esc(x.word)}"
-                    ondblclick="addChip(this)">${esc(x.word)}</span>`).join("")}</div>` : ""}
+               ${famHTML(g.related)}` : ""}
            </div>`).join("")}`;
     }
   }, 260);
@@ -3090,22 +3105,24 @@ async function loadRoots(){
            <span class="rtn">${g.mine.length}</span>
          </div>
          <div class="rtbody">
-           ${g.origin || g.story ? `<div class="rtstory">
-             ${g.origin ? `<div class="rtorig">${esc(g.origin)}</div>` : ""}
-             ${g.story ? `<div class="rtsy">${esc(g.story)}</div>` : ""}
-           </div>` : ""}
+           ${g.origin ? `<div class="rtorig">${esc(g.origin)}</div>` : ""}
            <div class="rtlab">In your list</div>
            <div class="chips">${g.mine.map(m =>
              `<span class="chip mine tip" data-zh="${esc(m.breakdown)}">${esc(m.word)}</span>`
            ).join("")}</div>
            ${g.related.length ? `<div class="rtlab">Same root — double-click to add</div>
-           <div class="chips">${g.related.map(x =>
-             `<span class="chip add tip" data-zh="${esc(x.zh)}" data-w="${esc(x.word)}"
-                ondblclick="addChip(this)">${esc(x.word)}</span>`).join("")}</div>` : ""}
+           ${famHTML(g.related)}` : ""}
          </div>
        </div>`).join("")}`;
   if(r.pending && r.has_key) setTimeout(()=>{ if(tab==="roots") loadRoots(); }, 20000);
 }
+
+// 每个关联词跟着自己的推导，双击就收
+window.famHTML = list => `<div class="fam">` + list.map(x =>
+  `<div class="famw tip" data-zh="${esc(x.zh)}" data-w="${esc(x.word)}"
+        ondblclick="addChip(this)">
+     <b>${esc(x.word)}</b><span>${esc(x.why || "")}</span>
+   </div>`).join("") + `</div>`;
 
 window.toggleRoot = el => {
   const on = el.classList.toggle("open");
@@ -3524,7 +3541,6 @@ def make_handler(cfg, token):
                         out.append({
                             "root": r["root"], "meaning": r["meaning"] or "",
                             "origin": (f["origin"] if f else "") or "",
-                            "story": (f["story"] if f else "") or "",
                             "mine": [x[0] for x in conn.execute(
                                 "SELECT wr.word FROM word_root wr"
                                 " JOIN words wd ON wd.word = wr.word"
@@ -3545,7 +3561,7 @@ def make_handler(cfg, token):
                     pend = conn.execute(
                         "SELECT COUNT(*) FROM words w LEFT JOIN word_root r"
                         " ON r.word = w.word WHERE r.word IS NULL").fetchone()[0]
-                    pend += sum(1 for g in gs if not g["story"])
+                    pend += sum(1 for g in gs if not g["related"])
                     return self._send(200, json.dumps(
                         {"groups": gs, "pending": pend,
                          "has_key": bool(cfg.get("api_key"))}, ensure_ascii=False))
