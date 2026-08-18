@@ -262,12 +262,14 @@ CREATE TABLE IF NOT EXISTS pick (
 CREATE INDEX IF NOT EXISTS idx_pick_status ON pick(status, day);
 
 CREATE TABLE IF NOT EXISTS word_root (
-  word       TEXT PRIMARY KEY,
-  root       TEXT,
+  word       TEXT NOT NULL,
+  root       TEXT NOT NULL DEFAULT '',
   variants   TEXT,
   meaning    TEXT,
   breakdown  TEXT,
-  created_at TEXT NOT NULL
+  seq        INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (word, root)
 );
 CREATE INDEX IF NOT EXISTS idx_word_root ON word_root(root);
 
@@ -296,6 +298,22 @@ def db():
         conn.commit()
     if "study_count" not in cols:
         conn.execute("ALTER TABLE words ADD COLUMN study_count INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
+    wcols = [r[1] for r in conn.execute("PRAGMA table_info(word_root)")]
+    if wcols and "seq" not in wcols:      # 老结构：一个词只能有一个词根
+        conn.executescript("""
+            ALTER TABLE word_root RENAME TO word_root_old;
+            CREATE TABLE word_root (
+              word TEXT NOT NULL, root TEXT NOT NULL DEFAULT '', variants TEXT,
+              meaning TEXT, breakdown TEXT, seq INTEGER NOT NULL DEFAULT 0,
+              created_at TEXT NOT NULL, PRIMARY KEY (word, root));
+            INSERT OR IGNORE INTO word_root
+              (word, root, variants, meaning, breakdown, seq, created_at)
+              SELECT word, COALESCE(root,''), variants, meaning, breakdown, 0, created_at
+              FROM word_root_old;
+            DROP TABLE word_root_old;
+            CREATE INDEX IF NOT EXISTS idx_word_root ON word_root(root);
+        """)
         conn.commit()
     fcols = [r[1] for r in conn.execute("PRAGMA table_info(root_family)")]
     for c in ("origin", "story"):
@@ -1728,16 +1746,15 @@ ROOT_SYSTEM = ("你是一位词源学老师，服务对象是%s。"
 
 ROOT_USER = """分析这些英语单词的构词：{words}
 
-对每个词判断它有没有清晰的拉丁/希腊词根。古英语来源的常用词（get、run、bear 之类）
-没有可拆的词根，root 填空字符串。
+对每个词列出它**全部**的拉丁/希腊词根。合成词往往不止一个，
+如 semiconductor 有 semi(半) 和 duct(引导)，carnivorous 有 carn(肉) 和 vor(吃)。
+古英语来源的常用词（get、run、bear 之类）没有可拆的词根，roots 给空数组。
 
 返回：
 {{"items": [
   {{"word": "原词",
-    "root": "核心词根，如 tract；没有就填空",
-    "variants": "该词根的常见拼写变体，逗号分隔，如 tract,treat",
-    "meaning": "词根的中文意思，2-6 个字，如 拉、拖",
-    "breakdown": "拆解，如 con-(共同) + tract(拉) + -or(人) → 一起拉合约的人"}}
+    "roots": [{{"root": "词根，如 duct", "meaning": "中文意思，2-6 字，如 引导"}}],
+    "breakdown": "整词拆解，如 semi-(半) + duct(引导) + -or(物) → 半导体"}}
 ]}}"""
 
 
@@ -1784,11 +1801,21 @@ def roots_analyze(conn, cfg, limit=20, quiet=True):
     n = 0
     for w in words:                       # 没返回的也占个位，免得反复问
         it = got.get(w, {})
-        conn.execute(
-            "INSERT OR REPLACE INTO word_root (word, root, variants, meaning,"
-            " breakdown, created_at) VALUES (?,?,?,?,?,?)",
-            (w, normalize(str(it.get("root") or "")), str(it.get("variants") or ""),
-             str(it.get("meaning") or ""), str(it.get("breakdown") or ""), now_iso()))
+        bd = str(it.get("breakdown") or "")
+        rs = it.get("roots")
+        rs = rs if isinstance(rs, list) else []
+        if not rs:
+            conn.execute(
+                "INSERT OR REPLACE INTO word_root (word, root, meaning, breakdown,"
+                " seq, created_at) VALUES (?,'','',?,0,?)", (w, bd, now_iso()))
+        for i, r in enumerate(rs[:3]):
+            root = normalize(str((r or {}).get("root") or ""))
+            if not root:
+                continue
+            conn.execute(
+                "INSERT OR REPLACE INTO word_root (word, root, meaning, breakdown,"
+                " seq, created_at) VALUES (?,?,?,?,?,?)",
+                (w, root, str(r.get("meaning") or ""), bd, i, now_iso()))
         n += 1
     conn.commit()
     return n
@@ -2417,7 +2444,9 @@ button.g1 small,button.g2 small,button.g3 small{color:var(--dim)}
 .row.rootopen .rootpanel{display:block}
 .wrhead{display:flex;align-items:baseline;gap:10px}
 .wrhead b{font-size:17px;font-weight:600}
-.wrbd{font-size:13.5px;color:var(--dim);margin-top:4px}
+.wrbd{font-size:14px;color:var(--fg);margin-bottom:4px}
+.wrblock{padding-top:12px}
+.wrblock + .wrblock{margin-top:6px;border-top:1px dashed var(--line)}
 .cl{flex:0 0 33%;min-width:0}
 .cr{flex:1;min-width:0;padding-left:22px;border-left:1px solid var(--line);
   align-self:stretch;position:relative}
@@ -2790,20 +2819,23 @@ window.wordRoot = el => {
       panel.innerHTML = `<div class="rtlab">looking up the root…</div>`;
       const d = await api("/api/word_root?w=" + encodeURIComponent(el.textContent.trim()));
       panel.dataset.loaded = "1";
-      panel.innerHTML = !d.root
+      const rs = d.roots || [];
+      panel.innerHTML = !rs.length
         ? `<div class="rtlab">No Latin/Greek root — this one is native English.</div>`
-        : `<div class="wrhead"><b>${esc(d.root)}</b><span class="rtm">${esc(d.meaning)}</span></div>
-           ${d.breakdown ? `<div class="wrbd">${esc(d.breakdown)}</div>` : ""}
-           ${d.origin || d.story ? `<div class="rtstory">
-             ${d.origin ? `<div class="rtorig">${esc(d.origin)}</div>` : ""}
-             ${d.story ? `<div class="rtsy">${esc(d.story)}</div>` : ""}</div>` : ""}
-           ${d.mine.length ? `<div class="rtlab">Also in your list</div>
-             <div class="chips">${d.mine.map(x =>
-               `<span class="chip mine">${esc(x)}</span>`).join("")}</div>` : ""}
-           ${d.related.length ? `<div class="rtlab">Same root — double-click to add</div>
-             <div class="chips">${d.related.map(x =>
-               `<span class="chip add tip" data-zh="${esc(x.zh)}" data-w="${esc(x.word)}"
-                  ondblclick="addChip(this)">${esc(x.word)}</span>`).join("")}</div>` : ""}`;
+        : `${d.breakdown ? `<div class="wrbd">${esc(d.breakdown)}</div>` : ""}
+           ${rs.map(g => `<div class="wrblock">
+             <div class="wrhead"><b>${esc(g.root)}</b><span class="rtm">${esc(g.meaning)}</span></div>
+             ${g.origin || g.story ? `<div class="rtstory">
+               ${g.origin ? `<div class="rtorig">${esc(g.origin)}</div>` : ""}
+               ${g.story ? `<div class="rtsy">${esc(g.story)}</div>` : ""}</div>` : ""}
+             ${g.mine.length ? `<div class="rtlab">Also in your list</div>
+               <div class="chips">${g.mine.map(x =>
+                 `<span class="chip mine">${esc(x)}</span>`).join("")}</div>` : ""}
+             ${g.related.length ? `<div class="rtlab">Same root — double-click to add</div>
+               <div class="chips">${g.related.map(x =>
+                 `<span class="chip add tip" data-zh="${esc(x.zh)}" data-w="${esc(x.word)}"
+                    ondblclick="addChip(this)">${esc(x.word)}</span>`).join("")}</div>` : ""}
+           </div>`).join("")}`;
     }
   }, 260);
 };
@@ -3477,28 +3509,32 @@ def make_handler(cfg, token):
                     }, ensure_ascii=False))
                 if u.path == "/api/word_root":
                     w = normalize(qs.get("w", [""])[0])
-                    r = conn.execute(
-                        "SELECT root, meaning, breakdown FROM word_root WHERE word = ?",
-                        (w,)).fetchone()
-                    if not r or not r["root"]:
-                        return self._send(200, json.dumps({"root": ""}))
-                    root = r["root"]
-                    f = conn.execute(
-                        "SELECT origin, story FROM root_family WHERE root = ?",
-                        (root,)).fetchone()
-                    mine = [x[0] for x in conn.execute(
-                        "SELECT wr.word FROM word_root wr JOIN words wd ON wd.word = wr.word"
-                        " WHERE wr.root = ? AND wr.word != ? ORDER BY wr.word", (root, w))]
+                    rows = conn.execute(
+                        "SELECT root, meaning, breakdown FROM word_root"
+                        " WHERE word = ? AND root != '' ORDER BY seq", (w,)).fetchall()
+                    if not rows:
+                        return self._send(200, json.dumps({"roots": []}))
                     known = {x[0] for x in conn.execute("SELECT word FROM words")}
                     known |= {x[0] for x in conn.execute("SELECT word FROM inbox")}
-                    return self._send(200, json.dumps({
-                        "root": root, "meaning": r["meaning"] or "",
-                        "breakdown": r["breakdown"] or "",
-                        "origin": (f["origin"] if f else "") or "",
-                        "story": (f["story"] if f else "") or "",
-                        "mine": mine,
-                        "related": root_related(conn, root, known),
-                    }, ensure_ascii=False))
+                    out = []
+                    for r in rows:
+                        f = conn.execute(
+                            "SELECT origin, story FROM root_family WHERE root = ?",
+                            (r["root"],)).fetchone()
+                        out.append({
+                            "root": r["root"], "meaning": r["meaning"] or "",
+                            "origin": (f["origin"] if f else "") or "",
+                            "story": (f["story"] if f else "") or "",
+                            "mine": [x[0] for x in conn.execute(
+                                "SELECT wr.word FROM word_root wr"
+                                " JOIN words wd ON wd.word = wr.word"
+                                " WHERE wr.root = ? AND wr.word != ? ORDER BY wr.word",
+                                (r["root"], w))],
+                            "related": root_related(conn, r["root"], known),
+                        })
+                    return self._send(200, json.dumps(
+                        {"roots": out, "breakdown": rows[0]["breakdown"] or ""},
+                        ensure_ascii=False))
                 if u.path == "/api/known":
                     ws = [r[0] for r in conn.execute("SELECT word FROM words")]
                     ws += [r[0] for r in conn.execute(
