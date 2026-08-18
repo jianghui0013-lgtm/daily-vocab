@@ -3483,7 +3483,7 @@ window.fetchNews=async(btn)=>{
 };
 
 // ---------- 鼠标停在任意英文单词上 -> 就地显示中文
-const READ_AREAS = "#news .nbody, .scbody, .den, .card .sent, .card .def";
+const READ_AREAS = "#news .nbody, .scbody, .schead b, .den, .card .sent, .card .def";
 const defCache = new Map();
 let hoverWord = "", hoverTimer = null;
 
