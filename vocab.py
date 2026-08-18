@@ -273,6 +273,16 @@ CREATE TABLE IF NOT EXISTS word_root (
 );
 CREATE INDEX IF NOT EXISTS idx_word_root ON word_root(root);
 
+CREATE TABLE IF NOT EXISTS scene (
+  id         INTEGER PRIMARY KEY,
+  title      TEXT,
+  body       TEXT,
+  zh         TEXT,
+  seeds      TEXT,
+  news       TEXT,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS root_family (
   root       TEXT PRIMARY KEY,
   words      TEXT,
@@ -1507,6 +1517,14 @@ def cmd_watch(args, cfg):
                         notify("生词本", "今天的 %d 条科技商业新闻到了" % got, cfg)
             except Exception as e:
                 print(dim("  新闻抓取出错: %s" % e))
+        # 场景短文备着几段，读完自动补
+        if cfg.get("api_key") and tick % 45 == 0:
+            try:
+                if conn.execute("SELECT COUNT(*) FROM scene").fetchone()[0] < 6:
+                    if scene_make(conn, cfg):
+                        print("  %s" % green("场景短文 +1"))
+            except Exception as e:
+                print(dim("  场景生成出错: %s" % e))
         # 词根分析 + 同根词族，一次一批
         if cfg.get("api_key") and tick % 30 == 0:
             try:
@@ -1736,6 +1754,105 @@ def cmd_examples(args, cfg):
         else:
             print("  %s %s" % (red("×"), w["word"]))
     print(dim("\n完成 %d/%d" % (ok, len(rows))))
+    return 0
+
+
+# ---------------------------------------------------------------- 场景短文
+
+SCENE_SYSTEM = ("你是一位英语阅读材料作者，服务对象是%s，他每天读科技和商业新闻。"
+                "只输出一个 JSON 对象，不要 markdown 代码块，不要解释性文字。")
+
+SCENE_USER = """这几个词是他已经掌握的：{seeds}
+
+写一段科技或商业场景的英文短文，把这些词自然地用进去 —— 它们是他熟悉的落脚点。
+同时**引入 {n} 个他大概率还不认识的新词**（六级/托福/GRE 水平，科技商业语境里真实常用）。
+新词要放在上下文能猜出大意的位置，别堆在一起。
+
+要求：
+- 120-160 词，是一个完整的小场景（融资、发布会、裁员、财报、收购、监管调查之类），不是散句
+- 句子结构不要太长，一句话讲一件事
+- 新词必须是短文里真实出现过的原形或变形
+
+返回：
+{{"title": "5 词以内的英文小标题",
+  "body": "英文短文",
+  "zh": "整段的中文翻译",
+  "new_words": [{{"word": "新词原形", "zh": "中文释义", "why": "它在这段里指什么，一句话"}}]}}"""
+
+
+def scene_make(conn, cfg, quiet=True):
+    """拿库里的词当种子，生成一段带新词的场景短文。"""
+    if not cfg.get("api_key"):
+        return None
+    seeds = [r[0] for r in conn.execute(
+        "SELECT word FROM words ORDER BY RANDOM() LIMIT 5")]
+    if len(seeds) < 3:
+        return None
+    payload = {
+        "model": cfg.get("model"),
+        "messages": [
+            {"role": "system", "content": SCENE_SYSTEM % cfg.get("level")},
+            {"role": "user", "content": SCENE_USER.format(
+                seeds="、".join(seeds), n=6)},
+        ],
+        "temperature": 0.7,
+        "response_format": {"type": "json_object"},
+    }
+    try:
+        req = urllib.request.Request(
+            cfg.get("api_base", "").rstrip("/") + "/chat/completions",
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers={"Content-Type": "application/json",
+                     "Authorization": "Bearer " + cfg["api_key"]}, method="POST")
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            d = _parse_json(json.loads(resp.read().decode("utf-8"))
+                            ["choices"][0]["message"]["content"])
+    except Exception as e:
+        if not quiet:
+            _clear_line()
+            print(dim("  场景生成失败: %s" % str(e)[:60]))
+        return None
+    if not d or not d.get("body"):
+        return None
+    news = [x for x in (d.get("new_words") or []) if isinstance(x, dict) and x.get("word")]
+    cur = conn.execute(
+        "INSERT INTO scene (title, body, zh, seeds, news, created_at)"
+        " VALUES (?,?,?,?,?,?)",
+        (str(d.get("title") or "")[:80], d["body"], str(d.get("zh") or ""),
+         json.dumps(seeds, ensure_ascii=False),
+         json.dumps(news, ensure_ascii=False), now_iso()))
+    conn.commit()
+    return cur.lastrowid
+
+
+def scenes_list(conn, limit=12):
+    out = []
+    for r in conn.execute(
+            "SELECT * FROM scene ORDER BY id DESC LIMIT ?", (limit,)):
+        try:
+            news = json.loads(r["news"] or "[]")
+        except Exception:
+            news = []
+        have = {x[0] for x in conn.execute("SELECT word FROM words")}
+        for x in news:
+            x["saved"] = normalize(str(x.get("word") or "")) in have
+        out.append({"id": r["id"], "title": r["title"], "body": r["body"],
+                    "zh": r["zh"], "news": news,
+                    "seeds": json.loads(r["seeds"] or "[]"),
+                    "day": (r["created_at"] or "")[:10]})
+    return out
+
+
+def cmd_scene(args, cfg):
+    conn = db()
+    if args.new:
+        sid = scene_make(conn, cfg, quiet=False)
+        print(green("  生成了一段") if sid else red("  生成失败"))
+    for sc in scenes_list(conn, args.limit):
+        print("\n%s %s" % (bold(sc["title"] or "(untitled)"), dim(sc["day"])))
+        print("  " + (sc["body"] or "")[:300])
+        print("  " + dim("新词: " + ", ".join(
+            "%s(%s)" % (x["word"], x.get("zh", "")) for x in sc["news"])))
     return 0
 
 
@@ -2505,6 +2622,12 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
   text-overflow:ellipsis;white-space:nowrap}
 .sgs{font-size:10.5px;color:var(--accent);border:1px solid var(--accent);
   border-radius:5px;padding:0 4px;flex:none}
+.sc{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:16px 18px;margin-bottom:10px;box-shadow:var(--shadow)}
+.schead{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.schead b{font-size:17px;font-weight:600}
+.scbody{font-size:15.5px;line-height:1.85;margin:0 0 4px;max-width:68ch}
+.scnew{border-bottom:1.5px dashed var(--warn);cursor:pointer}
 .rt{background:var(--card);border:1px solid var(--line);border-radius:11px;
   margin-bottom:7px;box-shadow:var(--shadow)}   /* 不能 overflow:hidden，会裁掉提示框 */
 .rthead{display:flex;align-items:baseline;gap:11px;padding:12px 15px;cursor:pointer;
@@ -2650,6 +2773,7 @@ body.wordtip .tip:hover::after{display:none}
       <button class="tab on" data-t="all">Words</button>
       <button class="tab" data-t="pick">Pick</button>
       <button class="tab" data-t="roots">Roots</button>
+      <button class="tab" data-t="scenes">Scenes</button>
       <button class="tab" data-t="news">News</button>
       <button class="tab" data-t="review">Review</button>
       <button class="tab" data-t="set" title="Settings">⚙</button>
@@ -2658,6 +2782,7 @@ body.wordtip .tip:hover::after{display:none}
   <div id="all"></div>
   <div id="pick" class="hidden"></div>
   <div id="roots" class="hidden"></div>
+  <div id="scenes" class="hidden"></div>
   <div id="news" class="hidden"></div>
   <div id="review" class="hidden"></div>
   <div id="set" class="hidden"></div>
@@ -2676,7 +2801,7 @@ const post=(p,b)=>api(p,{method:"POST",headers:{"Content-Type":"application/json
 const esc=s=>(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 let tab="all", Q=[], qi=0, flipped=false;
-const TABS=["all","pick","roots","news","review","set"];
+const TABS=["all","pick","roots","scenes","news","review","set"];
 
 function activate(t){
   if(!TABS.includes(t)) t="all";
@@ -2689,6 +2814,7 @@ function activate(t){
   if(t==="all") loadAll("");
   if(t==="pick") loadPick();
   if(t==="roots") loadRoots();
+  if(t==="scenes") loadScenes();
   if(t==="news") loadNews();
   if(t==="review") loadQueue();
   if(t==="set") loadSet();
@@ -3026,7 +3152,7 @@ async function copyText(txt,quiet){
 }
 // 双击页面上任何一个英文单词：复制 + 入库
 document.addEventListener("dblclick",async e=>{
-  if(!e.target.closest("#rows, #review, #all, #news")) return;
+  if(!e.target.closest("#rows, #review, #all, #news, #scenes")) return;
   const sel=(window.getSelection().toString()||"").trim();
   const w=/^[A-Za-z][A-Za-z'-]{2,}$/.test(sel)
     ? sel
@@ -3079,6 +3205,55 @@ window.forget=async(id,ev)=>{
     const c = document.querySelector("#review .count");
     if(c) c.firstChild.textContent = ` ${n} random words `;
   }
+};
+
+// ---------- 场景短文：用你已有的词当锚，把新词带出来
+async function loadScenes(){
+  const el = $("#scenes");
+  const r = await api("/api/scenes");
+  const scs = r.scenes || [];
+  if(!scs.length){
+    el.innerHTML = `<div class="empty">${r.has_key
+      ? `No scenes yet. <a class="lk" onclick="newScene(this)">Write one now</a>`
+      : "Add an AI key in ⚙ to generate scenes."}</div>`;
+    return;
+  }
+  el.innerHTML =
+    `<div class="count">Your words as anchors, new ones woven in · double-click any word to save it
+       ${r.has_key ? `<a class="lk" style="margin-left:10px" onclick="newScene(this)">new scene</a>` : ""}</div>
+     ${scs.map(s => `
+       <div class="sc">
+         <div class="schead"><b>${esc(s.title || "Scene")}</b><span class="npub">${esc(s.day)}</span></div>
+         <p class="scbody">${sceneHTML(s)}</p>
+         ${s.zh ? `<div class="rtlab tip" data-zh="${esc(s.zh)}">hover for the Chinese</div>` : ""}
+         ${s.news.length ? `<div class="rtlab">New words here — double-click to add</div>
+           <div class="fam">${s.news.map(x => `
+             <div class="famw${x.saved ? " mine" : ""}" data-w="${esc(x.word)}"
+                  ${x.saved ? "" : `ondblclick="addChip(this)"`}>
+               <b>${esc(x.word)}</b><span>${esc(x.zh || "")}${
+                 x.why ? " · " + esc(x.why) : ""}</span>
+             </div>`).join("")}</div>` : ""}
+       </div>`).join("")}`;
+}
+
+// 段落里：你的词画绿线，新词加虚线底
+function sceneHTML(s){
+  const news = new Set(s.news.map(x => String(x.word || "").toLowerCase()));
+  return esc(s.body || "").replace(/[A-Za-z][A-Za-z'-]*/g, m => {
+    const low = m.toLowerCase();
+    if(news.has(low) || kwStems(low).some(x => news.has(x)))
+      return `<span class="scnew">${m}</span>`;
+    if(knownSet && kwStems(low).some(x => knownSet.has(x)))
+      return `<u class="kw">${m}</u>`;
+    return m;
+  });
+}
+
+window.newScene = async el => {
+  const old = el.textContent; el.textContent = "writing…";
+  await post("/api/scenes/new", {});
+  el.textContent = old;
+  loadScenes();
 };
 
 // ---------- 词根：只列词根，点开才展开
@@ -3562,6 +3737,10 @@ def make_handler(cfg, token):
                     ws += [r[0] for r in conn.execute(
                         "SELECT DISTINCT lemma FROM words WHERE lemma != ''")]
                     return self._send(200, json.dumps({"words": sorted(set(ws))}))
+                if u.path == "/api/scenes":
+                    return self._send(200, json.dumps(
+                        {"scenes": scenes_list(conn),
+                         "has_key": bool(cfg.get("api_key"))}, ensure_ascii=False))
                 if u.path == "/api/roots":
                     gs = roots_view(conn, cfg)
                     pend = conn.execute(
@@ -3686,6 +3865,11 @@ def make_handler(cfg, token):
                     return self._send(200, json.dumps(
                         {"ok": True, "added": added, "bumped": sorted(set(bumped)),
                          "skipped": reason}, ensure_ascii=False))
+                if u.path == "/api/scenes/new":
+                    sid = scene_make(conn, cfg)
+                    return self._send(200, json.dumps(
+                        {"ok": bool(sid), "scenes": scenes_list(conn)},
+                        ensure_ascii=False))
                 if u.path == "/api/pick/take":
                     w = normalize(str(body.get("word") or ""))
                     if not w:
@@ -4003,6 +4187,11 @@ def main():
     ip = sub.add_parser("import", help="从 JSON 导回词库")
     ip.add_argument("path")
     ip.set_defaults(func=cmd_import)
+
+    sc = sub.add_parser("scene", help="场景短文：用已有的词带出新词")
+    sc.add_argument("--new", action="store_true", help="生成一段新的")
+    sc.add_argument("-n", "--limit", type=int, default=3)
+    sc.set_defaults(func=cmd_scene)
 
     rt = sub.add_parser("roots", help="按词根把词库串起来")
     rt.add_argument("--analyze", action="store_true", help="给还没分析的词跑词根分析")
