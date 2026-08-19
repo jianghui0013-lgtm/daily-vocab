@@ -3061,9 +3061,23 @@ window.star=async(id,ev,delta)=>{
 
 // 例句里出现你已经收过的词，画一条下划线
 let knownSet = null;
+let pickPool = new Set();
 async function loadKnown(){
-  try{ const r = await api("/api/known"); knownSet = new Set(r.words || []); }
-  catch(e){ knownSet = new Set(); }
+  try{
+    const r = await api("/api/known");
+    knownSet = new Set(r.words || []);
+    pickPool = new Set(r.picks || []);
+  }catch(e){ knownSet = new Set(); pickPool = new Set(); }
+}
+
+// 阅读区通用标记：已收的画绿实线，推荐池里的画橙虚线
+function markReading(text){
+  return esc(text).replace(/[A-Za-z][A-Za-z'-]*/g, m => {
+    const low = m.toLowerCase(), st = kwStems(low);
+    if(knownSet && st.some(x => knownSet.has(x))) return `<u class="kw">${m}</u>`;
+    if(pickPool.size && st.some(x => pickPool.has(x))) return `<span class="scnew">${m}</span>`;
+    return m;
+  });
 }
 function kwStems(w){
   const o = [w];
@@ -3273,10 +3287,13 @@ function sceneHTML(s){
   const news = new Set(s.news.map(x => String(x.word || "").toLowerCase()));
   return esc(s.body || "").replace(/[A-Za-z][A-Za-z'-]*/g, m => {
     const low = m.toLowerCase();
-    if(news.has(low) || kwStems(low).some(x => news.has(x)))
+    const st = kwStems(low);
+    if(news.has(low) || st.some(x => news.has(x)))
       return `<span class="scnew">${m}</span>`;
-    if(knownSet && kwStems(low).some(x => knownSet.has(x)))
+    if(knownSet && st.some(x => knownSet.has(x)))
       return `<u class="kw">${m}</u>`;
+    if(pickPool.size && st.some(x => pickPool.has(x)))
+      return `<span class="scnew">${m}</span>`;
     return m;
   });
 }
@@ -3487,7 +3504,7 @@ async function loadNews(){
       <div class="nhead" onclick="toggleNews(this.parentNode,${r.id})"><span class="nsrc">${esc(r.source)}</span>
         <span class="ntitle${r.ai_zh?" tip":""}"${r.ai_zh?` data-zh="${esc(r.ai_zh)}"`:""}>${esc(r.title)}</span></div>
       <div class="nbody">
-        ${body?`<p>${esc(body)}</p>`:`<div class="wait">writing summary\u2026</div>`}
+        ${body?`<p>${markReading(body)}</p>`:`<div class="wait">writing summary\u2026</div>`}
         ${!full&&r.summary?`<p class="nraw">${esc(r.summary)}</p>`:""}
         <a class="lk" href="${esc(r.link)}" target="_blank" rel="noopener"
            onclick="event.stopPropagation()">Original \u2197</a>
@@ -3810,7 +3827,10 @@ def make_handler(cfg, token):
                     ws = [r[0] for r in conn.execute("SELECT word FROM words")]
                     ws += [r[0] for r in conn.execute(
                         "SELECT DISTINCT lemma FROM words WHERE lemma != ''")]
-                    return self._send(200, json.dumps({"words": sorted(set(ws))}))
+                    pk = [r[0] for r in conn.execute(
+                        "SELECT word FROM pick WHERE status IN ('pending','want')")]
+                    return self._send(200, json.dumps(
+                        {"words": sorted(set(ws)), "picks": sorted(set(pk))}))
                 if u.path == "/api/scenes":
                     return self._send(200, json.dumps(
                         {"scenes": scenes_list(conn),
@@ -3922,6 +3942,9 @@ def make_handler(cfg, token):
                              "id": row["id"], "count": row["encounter_count"] + 1},
                             ensure_ascii=False))
                     wid = insert_word(conn, lemma, ai, w, sent, "网页")
+                    conn.execute("UPDATE pick SET status='added'"
+                                 " WHERE word IN (?,?) AND status IN ('pending','want')",
+                                 (w, lemma))
                     conn.commit()
                     return self._send(200, json.dumps(
                         {"ok": True, "merged": False, "word": lemma, "id": wid},
