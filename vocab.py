@@ -1773,11 +1773,11 @@ SCENE_USER = """这几个词是他已经掌握的：{seeds}
 同时引入 {n} 个他大概率还不认识的新词（六级/托福/GRE 水平，科技商业语境里真实常用），
 放在上下文能猜出大意的位置。
 
-内容必须有实质价值，从下面挑一种：
-- 某本商业/科技经典里的一个观点，如 Zero to One 的垄断论、The Innovator's Dilemma
-  的颠覆理论、Thinking, Fast and Slow 的系统一系统二、Poor Charlie's Almanack 的多元思维模型
-- 一个真实发生过的商业案例（柯达错过数码、Netflix 转型流媒体、诺基亚的失守之类）
-- 一个值得理解的商业或技术概念（网络效应、护城河、边际成本趋零、规模不经济）
+这次请写 **{domain}** 方向的内容。必须有实质价值，可以是这个方向里的：
+一本经典著作的核心观点、一个真实发生过的案例、或一个值得理解的概念。
+
+**已经写过下面这些，换别的，不要重复公司、书或观点：**
+{used}
 
 **取材自书或他人观点时，必须用你自己的话重述，绝对不要引用原文句子。**
 在 source 里写明出处，如 "Zero to One — Peter Thiel"；纯属通用场景就留空。
@@ -1795,6 +1795,15 @@ SCENE_USER = """这几个词是他已经掌握的：{seeds}
   "new_words": [{{"word": "新词原形", "zh": "中文释义", "why": "它在这段里指什么，一句话"}}]}}"""
 
 
+SCENE_DOMAINS = [
+    "创业与融资", "并购与重组", "定价与商业模式", "供应链与制造",
+    "市场营销与品牌", "组织管理与人才", "金融市场与投资", "监管与反垄断",
+    "半导体与硬件", "人工智能产业", "平台经济与网络效应", "消费零售",
+    "能源与气候科技", "生物医药商业化", "媒体与内容产业", "物流与出行",
+    "企业软件与 SaaS", "支付与金融科技", "谈判与决策", "创新与研发管理",
+]
+
+
 def scene_make(conn, cfg, quiet=True):
     """拿库里的词当种子，生成一段带新词的场景短文。"""
     if not cfg.get("api_key"):
@@ -1803,12 +1812,18 @@ def scene_make(conn, cfg, quiet=True):
         "SELECT word FROM words ORDER BY RANDOM() LIMIT 5")]
     if len(seeds) < 3:
         return None
+    import random
+    used = [r for r in conn.execute(
+        "SELECT title, source FROM scene ORDER BY id DESC LIMIT 25")]
+    used_txt = "、".join(
+        "%s%s" % (r[0] or "", ("（%s）" % r[1]) if r[1] else "") for r in used) or "（还没有）"
+    domain = random.choice(SCENE_DOMAINS)
     payload = {
         "model": cfg.get("model"),
         "messages": [
             {"role": "system", "content": SCENE_SYSTEM % cfg.get("level")},
             {"role": "user", "content": SCENE_USER.format(
-                seeds="、".join(seeds), n=6)},
+                seeds="、".join(seeds), n=6, domain=domain, used=used_txt)},
         ],
         "temperature": 0.7,
         "response_format": {"type": "json_object"},
