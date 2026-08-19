@@ -3351,6 +3351,24 @@ window.markTaken = w => {
       el.classList.add("sctaken");
     }
   });
+  // 文中本来没标记的普通词，收下之后也画上实线
+  const re = new RegExp("\\b" + low.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\w{0,3}\\b", "gi");
+  document.querySelectorAll(".scbody, #news .nbody p").forEach(root => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const hits = [];
+    let n;
+    while((n = walker.nextNode())){
+      if(n.parentElement.closest("u.kw, .scnew, .sctaken")) continue;
+      re.lastIndex = 0;
+      if(re.test(n.nodeValue)) hits.push(n);
+    }
+    hits.forEach(node => {
+      const holder = document.createElement("span");
+      re.lastIndex = 0;
+      holder.innerHTML = esc(node.nodeValue).replace(re, m => `<u class="kw">${m}</u>`);
+      node.replaceWith(...holder.childNodes);
+    });
+  });
   document.querySelectorAll("#scenes .famw").forEach(el => {
     if((el.dataset.w || "").toLowerCase() === low){
       el.classList.add("mine");
