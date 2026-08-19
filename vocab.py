@@ -3081,11 +3081,13 @@ function markReading(text){
 }
 function kwStems(w){
   const o = [w];
+  const bare = w.replace(/[\u2019']s$/, "").replace(/[\u2019']$/, "");
+  if(bare !== w) o.push(bare);                 // incumbent's → incumbent
   const rules = [["ies","y"],["ied","y"],["ing",""],["ed",""],["es",""],["s",""],
                  ["ly",""],["er",""],["est",""]];
   for(const [suf, rp] of rules){
-    if(w.endsWith(suf) && w.length - suf.length >= 2){
-      const b = w.slice(0, w.length - suf.length) + rp;
+    if(bare.endsWith(suf) && bare.length - suf.length >= 2){
+      const b = bare.slice(0, bare.length - suf.length) + rp;
       o.push(b, b + "e");
       if(b.length > 2 && b[b.length-1] === b[b.length-2]) o.push(b.slice(0,-1));
     }
