@@ -3288,10 +3288,11 @@ function sceneHTML(s){
   return esc(s.body || "").replace(/[A-Za-z][A-Za-z'-]*/g, m => {
     const low = m.toLowerCase();
     const st = kwStems(low);
-    if(news.has(low) || st.some(x => news.has(x)))
-      return `<span class="scnew">${m}</span>`;
+    // 已经收进词库的一律实线，哪怕它同时是本段的「新词」
     if(knownSet && st.some(x => knownSet.has(x)))
       return `<u class="kw">${m}</u>`;
+    if(news.has(low) || st.some(x => news.has(x)))
+      return `<span class="scnew">${m}</span>`;
     if(pickPool.size && st.some(x => pickPool.has(x)))
       return `<span class="scnew">${m}</span>`;
     return m;
