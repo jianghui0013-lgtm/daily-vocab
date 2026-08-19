@@ -2659,7 +2659,8 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
 .schead b{font-size:17px;font-weight:600}
 .scsrc{font-size:12px;color:var(--accent);border:1px solid var(--accent);
   border-radius:6px;padding:1px 7px}
-.scbody{font-size:15.5px;line-height:1.85;margin:0 0 4px;max-width:68ch}
+.scbody{font-size:15.5px;line-height:1.85;margin:0 0 4px;max-width:68ch;
+  touch-action:manipulation}
 .scnew{border-bottom:1.5px dashed var(--warn);cursor:pointer}
 .sctaken{border-bottom:1.5px solid var(--accent)}
 .rt{background:var(--card);border:1px solid var(--line);border-radius:11px;
@@ -2729,7 +2730,7 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
 .exi:last-child{margin-bottom:0}
 .exi{position:relative}
 .exi .en{font-size:14px;line-height:1.55;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis}
+  text-overflow:ellipsis;touch-action:manipulation}
 u.kw{text-decoration:underline;text-decoration-color:var(--accent);
   text-decoration-thickness:1.5px;text-underline-offset:3px}
 .exi .zh{font-size:13px;color:var(--dim);margin-top:1px}
@@ -2783,7 +2784,8 @@ body.wordtip .tip:hover::after{display:none}
 .ntitle{font-size:15px;line-height:1.5}
 .nbody{display:none;margin-top:11px;padding-top:11px;border-top:1px solid var(--line)}
 .nitem.open .nbody{display:block}
-.nbody p{margin:0 0 12px;font-size:15px;line-height:1.75;max-width:70ch}
+.nbody p{margin:0 0 12px;font-size:15px;line-height:1.75;max-width:70ch;
+  touch-action:manipulation}
 .npub{font-size:12px;color:var(--dim);margin-left:12px}
 .nbody .nraw{font-size:13.5px;color:var(--dim)}
 .ntitle.tip{position:relative}
@@ -3200,18 +3202,13 @@ async function copyText(txt,quiet){
   }
   if(!quiet) toast(txt + " copied");
 }
-// 双击页面上任何一个英文单词：复制 + 入库
-document.addEventListener("dblclick",async e=>{
-  if(!e.target.closest("#rows, #review, #all, #news, #scenes")) return;
-  const sel=(window.getSelection().toString()||"").trim();
-  let w = /^[A-Za-z][A-Za-z'-]{2,}$/.test(sel) ? sel : "";
-  // 手机上双击往往不选中文字，就按手指落点取词
-  if(!w) w = wordAtPoint(e.clientX, e.clientY, "#rows, #review, #all, #news, #scenes") || "";
-  if(!w && e.target.closest(".wt")) w = e.target.closest(".wt").textContent.trim();
+// 双击 / 双指轻点任何一个英文单词：复制 + 入库
+const TAKE_AREAS = "#rows, #review, #all, #news, #scenes";
+
+async function takeWord(w){
   if(!w) return;
-  // 已经在库里的就别再收一遍了
   const low = w.toLowerCase();
-  if(knownSet && kwStems(low).some(x => knownSet.has(x))){
+  if(knownSet && kwStems(low).some(x => knownSet.has(x))){   // 已在库就别重复收
     getSelection().removeAllRanges();
     toast(`${w} · already in your list`);
     markTaken(w);
@@ -3219,14 +3216,42 @@ document.addEventListener("dblclick",async e=>{
   }
   copyText(w, true);
   toast(w + " …");
-  const r=await post("/api/add",{word:w,copied:true});
+  const r = await post("/api/add", {word: w, copied: true});
   toast(!r ? w : (r.merged ? `${r.word} · already saved · ${r.count}×`
                            : `${r.word} · saved`));
   loadKnown();
-  markTaken(w);                       // 文中那个词立刻从虚线变实线
-  // 不重排列表：你正在读的位置比「新词立刻跳到顶部」重要
-  if(tab==="all" && r && r.id) flashRow(r.id);
+  markTaken(w);                       // 文中那个词立刻画上实线
+  if(tab === "all" && r && r.id) flashRow(r.id);
+}
+
+function wordFromEvent(e, x, y){
+  const sel = (window.getSelection().toString() || "").trim();
+  if(/^[A-Za-z][A-Za-z'-]{2,}$/.test(sel)) return sel;
+  const w = wordAtPoint(x, y, TAKE_AREAS);
+  if(w) return w;
+  const wt = e.target.closest && e.target.closest(".wt");
+  return wt ? wt.textContent.trim() : "";
+}
+
+document.addEventListener("dblclick", e => {
+  if(!e.target.closest(TAKE_AREAS)) return;
+  takeWord(wordFromEvent(e, e.clientX, e.clientY));
 });
+
+// iOS Safari 会把双击吃掉当缩放手势，dblclick 常常不触发，所以自己判双击
+let tapAt = 0, tapX = 0, tapY = 0;
+document.addEventListener("touchend", e => {
+  const t = e.changedTouches && e.changedTouches[0];
+  if(!t || !e.target.closest(TAKE_AREAS)) return;
+  const now = Date.now();
+  if(now - tapAt < 340 && Math.abs(t.clientX - tapX) < 30 && Math.abs(t.clientY - tapY) < 30){
+    tapAt = 0;
+    e.preventDefault();                       // 别让浏览器再去缩放
+    takeWord(wordFromEvent(e, t.clientX, t.clientY));
+  }else{
+    tapAt = now; tapX = t.clientX; tapY = t.clientY;
+  }
+}, {passive: false});
 
 // 手机上没有 hover：长按卡片 0.55 秒才把删除按钮亮出来
 (function(){
