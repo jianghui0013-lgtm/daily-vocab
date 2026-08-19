@@ -3229,8 +3229,15 @@ function wordFromEvent(e, x, y){
   if(/^[A-Za-z][A-Za-z'-]{2,}$/.test(sel)) return sel;
   const w = wordAtPoint(x, y, TAKE_AREAS);
   if(w) return w;
-  const wt = e.target.closest && e.target.closest(".wt");
-  return wt ? wt.textContent.trim() : "";
+  // 兜底：手指落在已标记的词上（虚线新词、绿线已收词、单词标题）就直接取它
+  const el = (e.target.closest && e.target.closest(".scnew, u.kw, .sctaken, .wt, .famw"))
+          || (document.elementFromPoint && document.elementFromPoint(x, y));
+  if(el){
+    const t = (el.dataset && el.dataset.w) || el.textContent || "";
+    const m = String(t).trim().match(/^[A-Za-z][A-Za-z'’-]*/);
+    if(m && m[0].length >= 3) return m[0];
+  }
+  return "";
 }
 
 document.addEventListener("dblclick", e => {
