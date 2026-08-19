@@ -1773,14 +1773,14 @@ SCENE_USER = """这几个词是他已经掌握的：{seeds}
 同时引入 {n} 个他大概率还不认识的新词（六级/托福/GRE 水平，科技商业语境里真实常用），
 放在上下文能猜出大意的位置。
 
-这次请写 **{domain}** 方向的内容。必须有实质价值，可以是这个方向里的：
-一本经典著作的核心观点、一个真实发生过的案例、或一个值得理解的概念。
+这次写 **{domain}** 方向、取材于 **{kind}** 的内容。要有实质价值，读完能带走一个想法。
 
 **已经写过下面这些，换别的，不要重复公司、书或观点：**
 {used}
 
 **取材自书或他人观点时，必须用你自己的话重述，绝对不要引用原文句子。**
-在 source 里写明出处，如 "Zero to One — Peter Thiel"；纯属通用场景就留空。
+**source 必须写明出处**：书名 — 作者，或 人名 — 场合（如 "Jeff Bezos — 1997 shareholder letter"、
+"Paul Graham — Do Things That Don't Scale"）。实在只是通用概念才留空。
 
 其它要求：
 - 120-170 词，一段完整的意思，读完能有收获，不是造句练习
@@ -1794,6 +1794,19 @@ SCENE_USER = """这几个词是他已经掌握的：{seeds}
   "zh": "整段的中文翻译",
   "new_words": [{{"word": "新词原形", "zh": "中文释义", "why": "它在这段里指什么，一句话"}}]}}"""
 
+
+SCENE_SOURCES = [
+    "一本商业或科技经典著作的核心观点",
+    "一位创业者公开讲过的方法论或经营主张",
+    "一位投资人的思维模型或判断框架",
+    "一封知名股东信、内部信里的主张",
+    "一位企业家在访谈或演讲里的洞见",
+    "一家公司真实经历过的战略转折",
+    "一次著名的商业误判及其代价",
+    "一个经济学或管理学概念在商业中的应用",
+    "一位产品或设计负责人的取舍原则",
+    "一本讲组织、文化或人才的书里的观点",
+]
 
 SCENE_DOMAINS = [
     "创业与融资", "并购与重组", "定价与商业模式", "供应链与制造",
@@ -1818,12 +1831,14 @@ def scene_make(conn, cfg, quiet=True):
     used_txt = "、".join(
         "%s%s" % (r[0] or "", ("（%s）" % r[1]) if r[1] else "") for r in used) or "（还没有）"
     domain = random.choice(SCENE_DOMAINS)
+    kind = random.choice(SCENE_SOURCES)
     payload = {
         "model": cfg.get("model"),
         "messages": [
             {"role": "system", "content": SCENE_SYSTEM % cfg.get("level")},
             {"role": "user", "content": SCENE_USER.format(
-                seeds="、".join(seeds), n=6, domain=domain, used=used_txt)},
+                seeds="、".join(seeds), n=6, domain=domain,
+                kind=kind, used=used_txt)},
         ],
         "temperature": 0.7,
         "response_format": {"type": "json_object"},
