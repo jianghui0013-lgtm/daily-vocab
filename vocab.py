@@ -3173,10 +3173,19 @@ async function copyText(txt,quiet){
 document.addEventListener("dblclick",async e=>{
   if(!e.target.closest("#rows, #review, #all, #news, #scenes")) return;
   const sel=(window.getSelection().toString()||"").trim();
-  const w=/^[A-Za-z][A-Za-z'-]{2,}$/.test(sel)
-    ? sel
-    : (e.target.closest(".wt") ? e.target.closest(".wt").textContent.trim() : "");
+  let w = /^[A-Za-z][A-Za-z'-]{2,}$/.test(sel) ? sel : "";
+  // 手机上双击往往不选中文字，就按手指落点取词
+  if(!w) w = wordAtPoint(e.clientX, e.clientY, "#rows, #review, #all, #news, #scenes") || "";
+  if(!w && e.target.closest(".wt")) w = e.target.closest(".wt").textContent.trim();
   if(!w) return;
+  // 已经在库里的就别再收一遍了
+  const low = w.toLowerCase();
+  if(knownSet && kwStems(low).some(x => knownSet.has(x))){
+    getSelection().removeAllRanges();
+    toast(`${w} · already in your list`);
+    markTaken(w);
+    return;
+  }
   copyText(w, true);
   toast(w + " …");
   const r=await post("/api/add",{word:w,copied:true});
@@ -3487,7 +3496,7 @@ const READ_AREAS = "#news .nbody, .scbody, .schead b, .den, .card .sent, .card .
 const defCache = new Map();
 let hoverWord = "", hoverTimer = null;
 
-function wordAtPoint(x, y){
+function wordAtPoint(x, y, areas){
   let node, off;
   if(document.caretRangeFromPoint){
     const r = document.caretRangeFromPoint(x, y);
@@ -3499,7 +3508,7 @@ function wordAtPoint(x, y){
     node = p.offsetNode; off = p.offset;
   }else return null;
   if(!node || node.nodeType !== 3) return null;
-  if(!node.parentElement || !node.parentElement.closest(READ_AREAS)) return null;
+  if(!node.parentElement || !node.parentElement.closest(areas || READ_AREAS)) return null;
   const t = node.textContent, isw = c => c && /[A-Za-z'\-]/.test(c);
   if(!isw(t[off]) && !isw(t[off-1])) return null;
   let a = off, b = off;
