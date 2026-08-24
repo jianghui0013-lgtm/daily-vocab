@@ -43,6 +43,8 @@ DEFAULT_CFG = {
     "notify": True,           # 抓到词后弹 macOS 通知
     # --- 新闻 ---
     "lan_token": "",          # 手机访问用的固定口令，首次开 --lan 时自动生成
+    "capture_token": "",      # 只能往 /api/add 塞词的弱口令，给书架等外部页面用
+    "cors_origins": [],       # 允许跨域调用 /api/add 的站点，如 http://122.51.84.95
     "news_hour": 6,           # 每天几点抓（本地时间，24 小时制）
     "news_count": 10,         # 每天抓几条
     "pick_size": 21,          # 推荐区同时摆几个词（3 列 × 7 行）
@@ -3712,11 +3714,34 @@ def make_handler(cfg, token):
     from http.server import BaseHTTPRequestHandler
     import html as _html
 
+    capture_token = (cfg.get("capture_token") or "").strip()
+    # 书架那类外部页面要跨端口调 /api/add，得把它们的来源列进白名单
+    cors_origins = set(cfg.get("cors_origins") or [])
+    cors_origins |= {"http://122.51.84.95", "http://localhost:8765",
+                     "http://127.0.0.1:8765"}
+
     class H(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
 
         def log_message(self, *a):
             pass
+
+        def _cors(self):
+            org = (self.headers.get("Origin") or "").strip()
+            if org and (org in cors_origins or "*" in cors_origins):
+                self.send_header("Access-Control-Allow-Origin", org)
+                self.send_header("Vary", "Origin")
+                return True
+            return False
+
+        def do_OPTIONS(self):
+            self.send_response(204)
+            if self._cors():
+                self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+                self.send_header("Access-Control-Allow-Headers", "Content-Type")
+                self.send_header("Access-Control-Max-Age", "86400")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
 
         def _send(self, code, body, ctype="application/json; charset=utf-8"):
             data = body if isinstance(body, bytes) else body.encode("utf-8")
@@ -3724,6 +3749,7 @@ def make_handler(cfg, token):
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
             self.send_header("Cache-Control", "no-store")
+            self._cors()
             self.end_headers()
             self.wfile.write(data)
 
@@ -3734,6 +3760,10 @@ def make_handler(cfg, token):
             if self.client_address and self.client_address[0] in ("127.0.0.1", "::1"):
                 return True
             return qs.get("k", [""])[0] == token
+
+        def _capture_ok(self, qs):
+            # 弱口令只能往词库里塞词，读不到任何东西
+            return bool(capture_token) and qs.get("k", [""])[0] == capture_token
 
         def _guard(self, fn):
             try:
@@ -3938,8 +3968,10 @@ def make_handler(cfg, token):
         def _post(self):
             from urllib.parse import urlparse, parse_qs
             u = urlparse(self.path)
-            if not self._authed(parse_qs(u.query)):
-                return self._send(403, json.dumps({"error": "bad token"}))
+            _qs = parse_qs(u.query)
+            if not self._authed(_qs):
+                if not (u.path == "/api/add" and self._capture_ok(_qs)):
+                    return self._send(403, json.dumps({"error": "bad token"}))
             n = int(self.headers.get("Content-Length") or 0)
             try:
                 body = json.loads(self.rfile.read(n).decode("utf-8")) if n else {}
@@ -4246,6 +4278,20 @@ def cmd_serve(args, cfg):
                     raw = {}
             raw["lan_token"] = token
             save_cfg(raw)
+        # 只能塞词的弱口令，给书架那类外部页面用
+        ctoken = (cfg.get("capture_token") or "").strip()
+        if not ctoken:
+            ctoken = secrets.token_urlsafe(9)
+            raw = {}
+            if os.path.exists(CFG_PATH):
+                try:
+                    with open(CFG_PATH, "r", encoding="utf-8") as f:
+                        raw = json.load(f) or {}
+                except Exception:
+                    raw = {}
+            raw["capture_token"] = ctoken
+            save_cfg(raw)
+        cfg["capture_token"] = ctoken
     try:
         httpd = ThreadingHTTPServer((host, args.port), make_handler(cfg, token))
     except OSError as e:
