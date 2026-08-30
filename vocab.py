@@ -287,6 +287,13 @@ CREATE TABLE IF NOT EXISTS scene (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS review_batch (
+  day     TEXT    NOT NULL,
+  word_id INTEGER NOT NULL,
+  seq     INTEGER NOT NULL,
+  PRIMARY KEY (day, word_id)
+);
+
 CREATE TABLE IF NOT EXISTS root_family (
   root       TEXT PRIMARY KEY,
   words      TEXT,
@@ -1787,20 +1794,65 @@ def _days_since(ts):
     return (datetime.now() - t).total_seconds() / 86400.0
 
 
-def review_pending(conn):
-    """现在该复习的词有几个（到期 + 欠账）。只查三列，用来给导航打红点。"""
+def _logical_day(ts):
+    """把时间戳换算成「逻辑日」，和 today() 用同一把尺子。"""
+    if not ts:
+        return ""
+    try:
+        t = datetime.strptime(str(ts)[:19], "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return ""
+    return (t - timedelta(hours=DAY_CUTOFF_HOUR)).strftime("%Y-%m-%d")
+
+
+def _due_now(conn):
+    """现在到期的词，急的排前面。(word_id, over) 列表。"""
     rows = conn.execute(
-        "SELECT w.study_count, w.created_at, r.last_review_at"
+        "SELECT w.id, w.study_count, w.created_at, r.last_review_at"
         " FROM words w JOIN reviews r ON r.word_id = w.id").fetchall()
-    n = 0
+    out = []
     for r in rows:
         times = max(0, int(r["study_count"] or 1) - 1)
         seen = _days_since(r["last_review_at"] or r["created_at"])
         if times == 0 and seen < 1:
             continue                      # 今天刚收的，先不催
-        if seen - review_gap(times) >= 0:
-            n += 1
-    return n
+        over = seen - review_gap(times)
+        if over >= 0:
+            out.append((r["id"], over))
+    out.sort(key=lambda x: -x[1])
+    return out
+
+
+def todays_batch(conn, cfg):
+    """今天这一轮的词。当天第一次访问时抽一次，之后整天不变；
+       跨天自动换一轮。抽完就锁住，是为了「今天到底还剩几个」有个准数。"""
+    day = today()
+    have = conn.execute(
+        "SELECT word_id FROM review_batch WHERE day = ? ORDER BY seq", (day,)).fetchall()
+    if have:
+        return [r["word_id"] for r in have]
+    quota = int(cfg.get("review_quota", 50))
+    ids = [wid for wid, _ in _due_now(conn)[:quota]]
+    if ids:
+        conn.executemany(
+            "INSERT OR IGNORE INTO review_batch(day, word_id, seq) VALUES (?,?,?)",
+            [(day, wid, i) for i, wid in enumerate(ids)])
+    conn.execute("DELETE FROM review_batch WHERE day < ?", (day_plus(-7),))
+    conn.commit()
+    return ids
+
+
+def review_pending(conn, cfg):
+    """今天这一轮还剩几个没看。红点用它 —— 报「今天的活儿」，不报历史总欠账。"""
+    ids = todays_batch(conn, cfg)
+    if not ids:
+        return 0
+    day = today()
+    rows = conn.execute(
+        "SELECT r.word_id, r.last_review_at FROM reviews r"
+        " WHERE r.word_id IN (%s)" % ",".join("?" * len(ids)), ids).fetchall()
+    done = {r["word_id"] for r in rows if _logical_day(r["last_review_at"]) == day}
+    return len(ids) - len(done)
 
 
 def review_buckets(conn, cfg, per=50):
@@ -1840,14 +1892,28 @@ def review_buckets(conn, cfg, per=50):
     buckets["due"].sort(key=lambda x: -x["over"])
     buckets["fresh"].sort(key=lambda x: x["idle"])
     buckets["resting"].sort(key=lambda x: x["over"])
-    # 欠账可能积压几百个，一次全推等于没有优先级。先切出「今天这一份」。
-    quota = int(cfg.get("review_quota", 20))
-    today_rows = (buckets["lapsed"] + buckets["due"])[:quota]
-    today_ids = {d["id"] for d in today_rows}
-    for k in ("lapsed", "due"):
+
+    # 欠账可能积压几百个，一次全推等于没有优先级。今天这一轮当天抽定，
+    # 看完的留在原位标成 done，好让人看见进度；跨天自动换新一轮。
+    day = today()
+    by_id = {}
+    for v in buckets.values():
+        for d in v:
+            by_id[d["id"]] = d
+    batch = todays_batch(conn, cfg)
+    today_rows, today_ids = [], set()
+    for wid in batch:
+        d = by_id.get(wid)
+        if not d:
+            continue
+        d["done"] = _logical_day(d["last_review_at"]) == day
+        today_rows.append(d)
+        today_ids.add(wid)
+    for k in buckets:
         buckets[k] = [d for d in buckets[k] if d["id"] not in today_ids]
 
-    out = {"today": {"total": len(today_rows), "rows": today_rows}}
+    left = sum(1 for d in today_rows if not d["done"])
+    out = {"today": {"total": len(today_rows), "left": left, "rows": today_rows}}
     for k, v in buckets.items():
         out[k] = {"total": len(v), "rows": v[:per]}
     for k in out:
@@ -2816,6 +2882,9 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
 .revbody{display:none;padding-top:8px}
 .revsec.open .revbody{display:block}
 .revwhy{font-size:11.5px;color:var(--dim);margin-bottom:3px;letter-spacing:.02em}
+.row.done{opacity:.42}
+.row.done .revwhy{color:var(--accent)}
+.revsec.done .rtn{border-color:var(--accent);color:var(--accent)}
 .pkgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
 @media (max-width:880px){ .pkgrid{grid-template-columns:repeat(2,1fr)} }
 @media (max-width:560px){ .pkgrid{grid-template-columns:1fr} }
@@ -3002,7 +3071,7 @@ function paintDot(st){
 
 // ---------- 复习：按记忆曲线分档
 const REV_META = {
-  today:   {t: "This batch", d: "按记忆曲线挑出的一组 50 个 — 看完这组就够了"},
+  today:   {t: "Today",     d: "今天这一轮 — 每天换一批，看完就收工"},
   lapsed:  {t: "Overdue",   d: "还欠着的，明天继续消化"},
   due:     {t: "Due today", d: "按曲线算，今天到点该再看一遍"},
   fresh:   {t: "Just added",d: "今天刚收的，还没复习过"},
@@ -3026,21 +3095,30 @@ async function loadQueue(){
        <p>复习过 <i>n</i> 次的词，隔 <b>${(r.gaps||[]).join(" / ")}</b> 天该再看一次 ——
           看得越熟，间隔拉得越长。距上次看超过这个间隔就到期；超过一倍就算欠账，优先推给你。</p>
        <p>点亮一颗星 = 「我记起来了」，这个词的计时归零，下次间隔顺延到更长的一档。</p>
-       <p>欠账多的时候不会一股脑全推，一组只挑最急的 50 个，看完这组就算完成。</p>
+       <p>欠账多的时候不会一股脑全推。<b>每天开工时抽一轮 50 个，抽完当天不再变</b> ——
+          点过星的留在原位标成已看，好让你知道今天还剩几个。第二天自动换新的一轮。</p>
+       <p>导航上的红点 = 今天这轮还没做完，做完自动消失。</p>
      </div>
      ${order.map(k => {
        const b = bk[k] || {total: 0, rows: []};
        if(!b.total) return "";
        const m = REV_META[k];
-       return `<div class="revsec">
+       const isT = k === "today";
+       const left = isT ? (b.left == null ? b.total : b.left) : 0;
+       const tag  = isT ? `${b.total - left} / ${b.total}` : `${b.total}`;
+       const desc = isT && left === 0 ? "今天这轮做完了 — 明天见" : m.d;
+       return `<div class="revsec${isT && left === 0 ? " done" : ""}">
          <div class="revhead" onclick="this.parentNode.classList.toggle('open')">
-           <b>${m.t}</b><span class="rtm">${m.d}</span><span class="rtn">${b.total}</span>
+           <b>${m.t}</b><span class="rtm">${desc}</span><span class="rtn">${tag}</span>
          </div>
          <div class="revbody">${b.rows.map(w =>
-           rowHTML(w, st).replace('<div class="cl">',
+           rowHTML(w, st).replace('<div class="row',
+                                  `<div class="row${w.done ? " done" : ""}`)
+             .replace('<div class="cl">',
              `<div class="cl"><div class="revwhy">${
-               k === "resting" ? `next in ${Math.max(0, Math.ceil(-w.over))}d`
-                               : `${w.idle}d since last look · gap ${w.gap}d`}</div>`)
+               w.done            ? "done today \u2713"
+             : k === "resting"   ? `next in ${Math.max(0, Math.ceil(-w.over))}d`
+                                 : `${w.idle}d since last look \u00b7 gap ${w.gap}d`}</div>`)
          ).join("")}${b.total > b.rows.length
            ? `<div class="rtlab">showing ${b.rows.length} of ${b.total}</div>` : ""}</div>
        </div>`;
@@ -3253,7 +3331,25 @@ window.star=async(id,ev,delta)=>{
   el.textContent=starLabel(r.count);
   el.title=starTitle(r.count);
   el.classList.toggle("on", r.count>0);
-  if(delta>0) refreshBadge();                   // 复习一个少一个，红点跟着走
+  if(delta>0){
+    refreshBadge();                             // 复习一个少一个，红点跟着走
+    const row = el.closest(".row");
+    const sec = row && row.closest("#review .revsec");
+    if(sec && !row.classList.contains("done")){  // 当场压暗，进度条走一格
+      row.classList.add("done");
+      const why = row.querySelector(".revwhy");
+      if(why) why.textContent = "done today \u2713";
+      const n = sec.querySelector(".rtn"), mm = n && n.textContent.match(/^(\d+) \/ (\d+)$/);
+      if(mm){
+        const d = +mm[1] + 1, t = +mm[2];
+        n.textContent = d + " / " + t;
+        if(d >= t){
+          sec.classList.add("done");
+          sec.querySelector(".rtm").textContent = "今天这轮做完了 — 明天见";
+        }
+      }
+    }
+  }
 };
 
 // 例句里出现你已经收过的词，画一条下划线
@@ -4378,7 +4474,7 @@ def make_handler(cfg, token):
                 "queue_size": len(_queue(conn, cfg)),
                 "has_key": bool(cfg.get("api_key")),
                 "pending_examples": len(words_without_examples(conn)),
-                "review_due": review_pending(conn),
+                "review_due": review_pending(conn, cfg),
             }
     return H
 
