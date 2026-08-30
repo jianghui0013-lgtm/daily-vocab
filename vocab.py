@@ -48,6 +48,7 @@ DEFAULT_CFG = {
     "news_hour": 6,           # 每天几点抓（本地时间，24 小时制）
     "news_count": 10,         # 每天抓几条
     "pick_size": 21,          # 推荐区同时摆几个词（3 列 × 7 行）
+    "review_quota": 20,       # 每天推多少个词来复习
 }
 
 
@@ -1823,12 +1824,19 @@ def review_buckets(conn, cfg, per=40):
     buckets["due"].sort(key=lambda x: -x["over"])
     buckets["fresh"].sort(key=lambda x: x["idle"])
     buckets["resting"].sort(key=lambda x: x["over"])
-    out = {}
+    # 欠账可能积压几百个，一次全推等于没有优先级。先切出「今天这一份」。
+    quota = int(cfg.get("review_quota", 20))
+    today_rows = (buckets["lapsed"] + buckets["due"])[:quota]
+    today_ids = {d["id"] for d in today_rows}
+    for k in ("lapsed", "due"):
+        buckets[k] = [d for d in buckets[k] if d["id"] not in today_ids]
+
+    out = {"today": {"total": len(today_rows), "rows": today_rows}}
     for k, v in buckets.items():
-        out[k] = {"total": len(v), "rows": []}
-        for d in v[:per]:
+        out[k] = {"total": len(v), "rows": v[:per]}
+    for k in out:
+        for d in out[k]["rows"]:
             d["examples"] = examples_of(conn, d["id"])
-            out[k]["rows"].append(d)
     return out
 
 
@@ -2960,7 +2968,8 @@ const refreshBadge=()=>api("/api/stats");
 
 // ---------- 复习：按记忆曲线分档
 const REV_META = {
-  lapsed:  {t: "Overdue",   d: "超过该复习的时间一倍以上，快忘光了 — 先看这些"},
+  today:   {t: "Today",     d: "按记忆曲线挑出来的今天这一份 — 看完就够了"},
+  lapsed:  {t: "Overdue",   d: "还欠着的，明天继续消化"},
   due:     {t: "Due today", d: "按曲线算，今天到点该再看一遍"},
   fresh:   {t: "Just added",d: "今天刚收的，还没复习过"},
   resting: {t: "Resting",   d: "还在记忆期内，暂时不用管"},
@@ -2971,7 +2980,7 @@ async function loadQueue(){
   const st = await api("/api/stats");
   const r = await api("/api/review");
   const bk = r.buckets || {};
-  const order = ["lapsed", "due", "fresh", "resting"];
+  const order = ["today", "lapsed", "due", "fresh", "resting"];
   const total = order.reduce((n, k) => n + ((bk[k] && bk[k].total) || 0), 0);
   if(!total){ el.innerHTML = `<div class="empty">No words yet.</div>`; return; }
 
@@ -2983,6 +2992,7 @@ async function loadQueue(){
        <p>复习过 <i>n</i> 次的词，隔 <b>${(r.gaps||[]).join(" / ")}</b> 天该再看一次 ——
           看得越熟，间隔拉得越长。距上次看超过这个间隔就到期；超过一倍就算欠账，优先推给你。</p>
        <p>点亮一颗星 = 「我记起来了」，这个词的计时归零，下次间隔顺延到更长的一档。</p>
+       <p>欠账多的时候不会一股脑全推，每天只挑最急的 20 个，看完就算完成。</p>
      </div>
      ${order.map(k => {
        const b = bk[k] || {total: 0, rows: []};
