@@ -1764,6 +1764,74 @@ def cmd_examples(args, cfg):
     return 0
 
 
+# ---------------------------------------------------------------- 记忆曲线
+
+# 复习过 n 次之后，隔多少天该再看一次（艾宾浩斯那条曲线的常用取法）
+REVIEW_GAPS = [1, 2, 4, 7, 15, 30, 60, 120]
+
+
+def review_gap(times):
+    """看过几次 -> 下次间隔天数。看得越多，间隔拉得越长。"""
+    i = max(0, min(int(times or 0), len(REVIEW_GAPS) - 1))
+    return REVIEW_GAPS[i]
+
+
+def _days_since(ts):
+    if not ts:
+        return 9999
+    try:
+        t = datetime.strptime(str(ts)[:19], "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return 9999
+    return (datetime.now() - t).total_seconds() / 86400.0
+
+
+def review_buckets(conn, cfg, per=40):
+    """按记忆曲线把词分档。规则：
+       - 看过 n 次的词，隔 REVIEW_GAPS[n] 天该再看
+       - 距上次看已超过这个间隔 => 到期
+       - 超过间隔一倍以上 => 欠账（快忘光了，优先推）
+       - 刚收进来、一次没看过的 => 新词
+       - 其余还在记忆期内 => 休息中，不打扰
+    """
+    rows = conn.execute(
+        "SELECT w.*, r.last_review_at, r.status,"
+        " (SELECT sentence FROM contexts c WHERE c.word_id=w.id"
+        "  ORDER BY c.id DESC LIMIT 1) AS sentence,"
+        " " + HAS_ROOT_SQL +
+        " FROM words w JOIN reviews r ON r.word_id = w.id").fetchall()
+    buckets = {"lapsed": [], "due": [], "fresh": [], "resting": []}
+    for r in rows:
+        times = max(0, int(r["study_count"] or 1) - 1)
+        gap = review_gap(times)
+        seen = _days_since(r["last_review_at"] or r["created_at"])
+        over = seen - gap
+        d = dict(r)
+        d["gap"] = gap
+        d["idle"] = round(seen, 1)
+        d["over"] = round(over, 1)
+        if times == 0 and seen < 1:
+            key = "fresh"
+        elif over >= gap:
+            key = "lapsed"
+        elif over >= 0:
+            key = "due"
+        else:
+            key = "resting"
+        buckets[key].append(d)
+    buckets["lapsed"].sort(key=lambda x: -x["over"])
+    buckets["due"].sort(key=lambda x: -x["over"])
+    buckets["fresh"].sort(key=lambda x: x["idle"])
+    buckets["resting"].sort(key=lambda x: x["over"])
+    out = {}
+    for k, v in buckets.items():
+        out[k] = {"total": len(v), "rows": []}
+        for d in v[:per]:
+            d["examples"] = examples_of(conn, d["id"])
+            out[k]["rows"].append(d)
+    return out
+
+
 # ---------------------------------------------------------------- 场景短文
 
 SCENE_SYSTEM = ("你是一位英语阅读材料作者，服务对象是%s，他每天读科技和商业新闻。"
@@ -2710,6 +2778,20 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
 .famw b{font-size:14.5px;font-weight:600;flex:0 0 auto;min-width:112px}
 .famw span{font-size:13px;color:var(--dim);line-height:1.5}
 .famw.mine b{color:var(--accent)}
+.rule{background:var(--card);border:1px solid var(--line);border-radius:11px;
+  padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.rule b{font-size:14px}
+.rule p{margin:7px 0 0;font-size:13.5px;line-height:1.7;color:var(--dim);max-width:66ch}
+.rule i{font-style:italic}
+.revsec{margin-bottom:10px}
+.revhead{display:flex;align-items:baseline;gap:11px;padding:10px 14px;cursor:pointer;
+  background:var(--card);border:1px solid var(--line);border-radius:11px;
+  box-shadow:var(--shadow);user-select:none;-webkit-user-select:none}
+.revhead b{font-size:15px}
+.revsec.open .rtn{border-color:var(--accent);color:var(--accent)}
+.revbody{display:none;padding-top:8px}
+.revsec.open .revbody{display:block}
+.revwhy{font-size:11.5px;color:var(--dim);margin-bottom:3px;letter-spacing:.02em}
 .pkgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
 @media (max-width:880px){ .pkgrid{grid-template-columns:repeat(2,1fr)} }
 @media (max-width:560px){ .pkgrid{grid-template-columns:1fr} }
@@ -2876,18 +2958,54 @@ document.querySelectorAll(".tab[data-t]").forEach(
   b=>b.onclick=()=>activate(b.dataset.t));
 const refreshBadge=()=>api("/api/stats");
 
-// ---------- 复习：同样的卡片版面，每次进来随机翻出一批老词
+// ---------- 复习：按记忆曲线分档
+const REV_META = {
+  lapsed:  {t: "Overdue",   d: "超过该复习的时间一倍以上，快忘光了 — 先看这些"},
+  due:     {t: "Due today", d: "按曲线算，今天到点该再看一遍"},
+  fresh:   {t: "Just added",d: "今天刚收的，还没复习过"},
+  resting: {t: "Resting",   d: "还在记忆期内，暂时不用管"},
+};
+
 async function loadQueue(){
   const el = $("#review");
   const st = await api("/api/stats");
-  const data = await api("/api/words?random=1&n=20");
-  const rows = data.rows || [];
-  if(!rows.length){ el.innerHTML = `<div class="empty">No words yet.</div>`; return; }
+  const r = await api("/api/review");
+  const bk = r.buckets || {};
+  const order = ["lapsed", "due", "fresh", "resting"];
+  const total = order.reduce((n, k) => n + ((bk[k] && bk[k].total) || 0), 0);
+  if(!total){ el.innerHTML = `<div class="empty">No words yet.</div>`; return; }
+
   el.innerHTML =
-    `<div class="count">${rows.length} random words out of ${data.total}
-       <a class="lk" style="margin-left:10px" onclick="loadQueue()">shuffle</a></div>
-     ${rows.map(w => rowHTML(w, st)).join("")}`;
+    `<div class="count">Tap a word's star when you've recalled it — that resets its clock
+       <a class="lk" style="margin-left:10px" onclick="toggleRule(this)">how this works</a></div>
+     <div class="rule hidden" id="rulebox">
+       <b>推送规则</b>
+       <p>复习过 <i>n</i> 次的词，隔 <b>${(r.gaps||[]).join(" / ")}</b> 天该再看一次 ——
+          看得越熟，间隔拉得越长。距上次看超过这个间隔就到期；超过一倍就算欠账，优先推给你。</p>
+       <p>点亮一颗星 = 「我记起来了」，这个词的计时归零，下次间隔顺延到更长的一档。</p>
+     </div>
+     ${order.map(k => {
+       const b = bk[k] || {total: 0, rows: []};
+       if(!b.total) return "";
+       const m = REV_META[k];
+       return `<div class="revsec">
+         <div class="revhead" onclick="this.parentNode.classList.toggle('open')">
+           <b>${m.t}</b><span class="rtm">${m.d}</span><span class="rtn">${b.total}</span>
+         </div>
+         <div class="revbody">${b.rows.map(w =>
+           rowHTML(w, st).replace('<div class="cl">',
+             `<div class="cl"><div class="revwhy">${
+               k === "resting" ? `next in ${Math.max(0, Math.ceil(-w.over))}d`
+                               : `${w.idle}d since last look · gap ${w.gap}d`}</div>`)
+         ).join("")}${b.total > b.rows.length
+           ? `<div class="rtlab">showing ${b.rows.length} of ${b.total}</div>` : ""}</div>
+       </div>`;
+     }).join("")}`;
+  const first = el.querySelector(".revsec");
+  if(first) first.classList.add("open");
 }
+
+window.toggleRule = () => $("#rulebox").classList.toggle("hidden");
 
 // ---------- 全部
 function pagerHTML(){
@@ -3930,6 +4048,11 @@ def make_handler(cfg, token):
                     return self._send(200, json.dumps(
                         {"scenes": scenes_list(conn),
                          "has_key": bool(cfg.get("api_key"))}, ensure_ascii=False))
+                if u.path == "/api/review":
+                    return self._send(200, json.dumps(
+                        {"buckets": review_buckets(conn, cfg),
+                         "gaps": REVIEW_GAPS,
+                         "has_key": bool(cfg.get("api_key"))}, ensure_ascii=False))
                 if u.path == "/api/roots":
                     gs = roots_view(conn, cfg)
                     pend = conn.execute(
@@ -4123,6 +4246,10 @@ def make_handler(cfg, token):
                     conn.execute(
                         "UPDATE words SET study_count = MAX(0, study_count + ?) WHERE id = ?",
                         (d, body.get("id")))
+                    if d > 0:      # 点亮一颗星 = 刚复习过，记下时间
+                        conn.execute(
+                            "UPDATE reviews SET last_review_at = ? WHERE word_id = ?",
+                            (now_iso(), body.get("id")))
                     conn.commit()
                     r = conn.execute("SELECT study_count FROM words WHERE id = ?",
                                      (body.get("id"),)).fetchone()
