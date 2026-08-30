@@ -1787,6 +1787,22 @@ def _days_since(ts):
     return (datetime.now() - t).total_seconds() / 86400.0
 
 
+def review_pending(conn):
+    """现在该复习的词有几个（到期 + 欠账）。只查三列，用来给导航打红点。"""
+    rows = conn.execute(
+        "SELECT w.study_count, w.created_at, r.last_review_at"
+        " FROM words w JOIN reviews r ON r.word_id = w.id").fetchall()
+    n = 0
+    for r in rows:
+        times = max(0, int(r["study_count"] or 1) - 1)
+        seen = _days_since(r["last_review_at"] or r["created_at"])
+        if times == 0 and seen < 1:
+            continue                      # 今天刚收的，先不催
+        if seen - review_gap(times) >= 0:
+            n += 1
+    return n
+
+
 def review_buckets(conn, cfg, per=50):
     """按记忆曲线把词分档。规则：
        - 看过 n 次的词，隔 REVIEW_GAPS[n] 天该再看
@@ -2874,6 +2890,9 @@ u.kw{text-decoration:underline;text-decoration-color:var(--accent);
 input[type=password]{width:100%;padding:12px 14px;border-radius:11px;border:1px solid var(--line);
   background:var(--bg);color:var(--fg);font-size:15px;font-family:inherit;margin-top:10px}
 .tab[data-t="set"]{font-size:16px;padding:6px 10px}
+.tab{position:relative}
+.tab .dot{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;
+  background:#d2564b;box-shadow:0 0 0 2px var(--bg)}
 .hidden{display:none}
 #wtip{position:fixed;z-index:60;max-width:min(330px,80vw);padding:8px 12px;border-radius:9px;
   background:var(--fg);color:var(--bg);font-size:13.5px;line-height:1.55;
@@ -2964,7 +2983,22 @@ function activate(t){
 }
 document.querySelectorAll(".tab[data-t]").forEach(
   b=>b.onclick=()=>activate(b.dataset.t));
-const refreshBadge=()=>api("/api/stats");
+const refreshBadge=()=>api("/api/stats").then(st=>{ paintDot(st); return st; });
+
+// 有到期没复习的词，就在 Review 上点个红点
+function paintDot(st){
+  const b = document.querySelector('[data-t="review"]');
+  if(!b) return;
+  const old = b.querySelector(".dot");
+  const n = (st && st.review_due) || 0;
+  if(n > 0){
+    if(!old) b.insertAdjacentHTML("beforeend", '<span class="dot"></span>');
+    b.title = n + " words due for review";
+  } else {
+    if(old) old.remove();
+    b.removeAttribute("title");
+  }
+}
 
 // ---------- 复习：按记忆曲线分档
 const REV_META = {
@@ -2977,7 +3011,7 @@ const REV_META = {
 
 async function loadQueue(){
   const el = $("#review");
-  const st = await api("/api/stats");
+  const st = await refreshBadge();
   const r = await api("/api/review");
   const bk = r.buckets || {};
   const order = ["today", "lapsed", "due", "fresh", "resting"];
@@ -3219,6 +3253,7 @@ window.star=async(id,ev,delta)=>{
   el.textContent=starLabel(r.count);
   el.title=starTitle(r.count);
   el.classList.toggle("on", r.count>0);
+  if(delta>0) refreshBadge();                   // 复习一个少一个，红点跟着走
 };
 
 // 例句里出现你已经收过的词，画一条下划线
@@ -3802,6 +3837,7 @@ window.addEventListener("blur", hideWtip);
 window.goReview=()=>document.querySelector('[data-t="review"]').click();
 window.goSet=()=>document.querySelector('[data-t="set"]').click();
 loadKnown().then(() => activate(localStorage.getItem("tab") || "all"));
+refreshBadge();
 </script></body></html>"""
 
 
@@ -4342,6 +4378,7 @@ def make_handler(cfg, token):
                 "queue_size": len(_queue(conn, cfg)),
                 "has_key": bool(cfg.get("api_key")),
                 "pending_examples": len(words_without_examples(conn)),
+                "review_due": review_pending(conn),
             }
     return H
 
