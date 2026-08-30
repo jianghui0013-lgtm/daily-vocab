@@ -48,7 +48,7 @@ DEFAULT_CFG = {
     "news_hour": 6,           # 每天几点抓（本地时间，24 小时制）
     "news_count": 10,         # 每天抓几条
     "pick_size": 21,          # 推荐区同时摆几个词（3 列 × 7 行）
-    "review_quota": 20,       # 每天推多少个词来复习
+    "review_quota": 50,       # 一组推多少个词来复习
 }
 
 
@@ -1787,7 +1787,7 @@ def _days_since(ts):
     return (datetime.now() - t).total_seconds() / 86400.0
 
 
-def review_buckets(conn, cfg, per=40):
+def review_buckets(conn, cfg, per=50):
     """按记忆曲线把词分档。规则：
        - 看过 n 次的词，隔 REVIEW_GAPS[n] 天该再看
        - 距上次看已超过这个间隔 => 到期
@@ -2968,7 +2968,7 @@ const refreshBadge=()=>api("/api/stats");
 
 // ---------- 复习：按记忆曲线分档
 const REV_META = {
-  today:   {t: "Today",     d: "按记忆曲线挑出来的今天这一份 — 看完就够了"},
+  today:   {t: "This batch", d: "按记忆曲线挑出的一组 50 个 — 看完这组就够了"},
   lapsed:  {t: "Overdue",   d: "还欠着的，明天继续消化"},
   due:     {t: "Due today", d: "按曲线算，今天到点该再看一遍"},
   fresh:   {t: "Just added",d: "今天刚收的，还没复习过"},
@@ -2992,7 +2992,7 @@ async function loadQueue(){
        <p>复习过 <i>n</i> 次的词，隔 <b>${(r.gaps||[]).join(" / ")}</b> 天该再看一次 ——
           看得越熟，间隔拉得越长。距上次看超过这个间隔就到期；超过一倍就算欠账，优先推给你。</p>
        <p>点亮一颗星 = 「我记起来了」，这个词的计时归零，下次间隔顺延到更长的一档。</p>
-       <p>欠账多的时候不会一股脑全推，每天只挑最急的 20 个，看完就算完成。</p>
+       <p>欠账多的时候不会一股脑全推，一组只挑最急的 50 个，看完这组就算完成。</p>
      </div>
      ${order.map(k => {
        const b = bk[k] || {total: 0, rows: []};
