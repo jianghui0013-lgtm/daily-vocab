@@ -140,6 +140,18 @@ inbox 表现在只用来存「我认识」的词（status='rejected'），即你
 
 采集那一刻绝不打断你：全部静默入库/进 inbox，只弹一条 macOS 通知。
 
+## 词根词族（Roots 标签）
+
+每天推 `roots_per_day` 个词根（默认 5），每个词根挂一串同根词——英文释义 · 中文对照，
+背一个词根串起几十个词。词族里**双击任何一个词**就收进词库、进复习排程；
+已在库里的词显示绿色。当天锁定，背完一轮自动循环。凌晨 4 点换天，跟复习一致。
+
+词族数据内置在 vocab.py 里，由 `seed/make_roots.py` 从 ECDICT 生成（词形逐一核验）。
+想加词根：往 make_roots.py 的 ROOTS 列表里添，重跑，把产物粘回 vocab.py。
+
+    v roots                        # 终端看今天词族 + 已收词的词根
+    v config set roots_per_day 3   # 改每天词根数
+
 ## 备份
 
     cp ~/.vocab/vocab.db <随便哪儿>      # 单文件，拷走即备份

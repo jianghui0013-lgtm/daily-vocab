@@ -1,0 +1,800 @@
+[
+ {
+  "root": "spect / spec",
+  "meaning": "看",
+  "origin": "From Latin specere 'to look at' (past stem spect-).",
+  "words": [
+   {
+    "word": "inspect",
+    "phon": "in'spekt",
+    "en": "look over carefully",
+    "zh": "检查, 检阅, 检验；检查",
+    "frq": 5031
+   },
+   {
+    "word": "respect",
+    "phon": "ri'spekt",
+    "en": "(usually preceded by `in') a detail or point; an attitude of admiration or esteem",
+    "zh": "尊敬, 尊重, 问候；尊敬, 注意, 遵守",
+    "frq": 1554
+   },
+   {
+    "word": "expect",
+    "phon": "iks'pekt",
+    "en": "regard something as probable or likely; look forward to the probable occurrence of",
+    "zh": "预期, 盼望, 期待",
+    "frq": 405
+   },
+   {
+    "word": "suspect",
+    "phon": "sә'spekt",
+    "en": "someone who is under suspicion",
+    "zh": "被怀疑者, 嫌疑犯；令人怀疑的, 不可信的, 可疑的；怀疑, 猜想",
+    "frq": 2100
+   },
+   {
+    "word": "prospect",
+    "phon": "'prɒspekt",
+    "en": "the possibility of future success",
+    "zh": "景色, 展望；勘探, 勘察；勘探, 有前途",
+    "frq": 2323
+   },
+   {
+    "word": "aspect",
+    "phon": "'æspekt",
+    "en": "a distinct feature or element in a problem; a characteristic to be considered",
+    "zh": "外观, 方面, 面貌, 方向；方面, 局面；外观",
+    "frq": 1357
+   },
+   {
+    "word": "spectator",
+    "phon": "spek'teitә",
+    "en": "a close observer; someone who looks at something (such as an exhibition of some kind)",
+    "zh": "观众, 目击者, 旁观者",
+    "frq": 5215
+   },
+   {
+    "word": "spectacle",
+    "phon": "'spektәkl",
+    "en": "something or someone seen (especially a notable or unusual sight); an elaborate and remarkable displ",
+    "zh": "引人羡慕的东西, 景象, 眼镜, 场面, 公开展示",
+    "frq": 5857
+   },
+   {
+    "word": "speculate",
+    "phon": "'spekjuleit",
+    "en": "to believe especially on uncertain or tentative grounds; talk over conjecturally, or review in an id",
+    "zh": "深思, 推测, 投机；投机",
+    "frq": 4809
+   },
+   {
+    "word": "spectrum",
+    "phon": "'spektrәm",
+    "en": "an ordered array of the components of an emission or wave; a broad range of related objects or value",
+    "zh": "光谱, 范围, 系列；光谱",
+    "frq": 3893
+   },
+   {
+    "word": "specify",
+    "phon": "'spesifai",
+    "en": "decide upon or fix definitely; determine the essential quality of",
+    "zh": "详列, 指定, 说明；指定",
+    "frq": 4860
+   },
+   {
+    "word": "specific",
+    "phon": "spi'sifik",
+    "en": "a medicine that has a mitigating effect on a specific disease",
+    "zh": "特效药, 特性；特殊的, 明确的, 具有特效的, 特定地, 具体地",
+    "frq": 979
+   },
+   {
+    "word": "species",
+    "phon": "'spi:ʃiz",
+    "en": "taxonomic group whose members can interbreed; a specific kind of something",
+    "zh": "种, 类, 外形；茶剂；种",
+    "frq": 1141
+   },
+   {
+    "word": "specimen",
+    "phon": "'spesimәn",
+    "en": "an example regarded as typical of its class; a bit of tissue or blood or urine that is taken for dia",
+    "zh": "样品, 标本, 试料；试样",
+    "frq": 5851
+   },
+   {
+    "word": "retrospect",
+    "phon": "'retrәspekt",
+    "en": "contemplation of things past",
+    "zh": "回顾, 追忆, 回溯；回顾, 追忆",
+    "frq": 8344
+   },
+   {
+    "word": "perspective",
+    "phon": "pә'spektiv",
+    "en": "the appearance of things relative to one another as determined by their distance from the viewer",
+    "zh": "远景, 透视感, (观察问题的)视角, 透视法, 看法, 透视图；透视的, 透视法的；透视",
+    "frq": 1412
+   },
+   {
+    "word": "circumspect",
+    "phon": "'sә:kәmspekt",
+    "en": "heedful of potential consequences",
+    "zh": "细心的, 慎重的",
+    "frq": 20608
+   },
+   {
+    "word": "conspicuous",
+    "phon": "kәn'spikjuәs",
+    "en": "obvious to the eye or mind",
+    "zh": "显著的, 显眼的, 出众的",
+    "frq": 9384
+   },
+   {
+    "word": "despise",
+    "phon": "di'spaiz",
+    "en": "look down on with disdain",
+    "zh": "轻视",
+    "frq": 9016
+   },
+   {
+    "word": "prospectus",
+    "phon": "prәs'pektәs",
+    "en": "a formal written offer to sell securities (filed with the SEC) that sets forth a plan for a (propose",
+    "zh": "创办计划书, (内容)说明书, 内容简介；(募债)说明书",
+    "frq": 19077
+   },
+   {
+    "word": "introspection",
+    "phon": ".intrәu'spekʃәn",
+    "en": "the contemplation of your own thoughts and desires and conduct",
+    "zh": "内省, 反省；内省",
+    "frq": 17911
+   },
+   {
+    "word": "irrespective",
+    "phon": ".iri'spektiv",
+    "en": "in spite of everything; without regard to drawbacks",
+    "zh": "不顾的, 无关的, 没关系的",
+    "frq": 14501
+   },
+   {
+    "word": "specification",
+    "phon": ".spesifi'keiʃәn",
+    "en": "a detailed description of design criteria for a piece of work; naming explicitly",
+    "zh": "规格, 详述, 详细说明书；规范；形式说明；说明；说明书；规格",
+    "frq": 7835
+   },
+   {
+    "word": "inspector",
+    "phon": "in'spektә",
+    "en": "a high ranking police officer",
+    "zh": "检查员, 巡视员；检查员",
+    "frq": 3550
+   },
+   {
+    "word": "retrospective",
+    "phon": ".retrә'spektiv",
+    "en": "concerned with or related to the past",
+    "zh": "回顾的, 怀旧的, 在后面的；回顾展",
+    "frq": 9036
+   },
+   {
+    "word": "auspicious",
+    "phon": "ɒ:'spiʃәs",
+    "en": "auguring favorable circumstances and good luck",
+    "zh": "吉兆的, 幸运的",
+    "frq": 19908
+   }
+  ]
+ },
+ {
+  "root": "dict",
+  "meaning": "说",
+  "origin": "From Latin dicere / dictare 'to say, to speak repeatedly'.",
+  "words": [
+   {
+    "word": "predict",
+    "phon": "pri'dikt",
+    "en": "make a prediction about; tell in advance",
+    "zh": "预知, 预言, 预报",
+    "frq": 1613
+   },
+   {
+    "word": "predictable",
+    "phon": "pri'diktәbl",
+    "en": "capable of being foretold",
+    "zh": "可预言的",
+    "frq": 5738
+   },
+   {
+    "word": "verdict",
+    "phon": "'vә:dikt",
+    "en": "the findings of a jury on issues of fact submitted to it for decision; can be used in formulating a ",
+    "zh": "裁决, 判决, 判断性意见, 定论, 结论；定论, 判断, 意见",
+    "frq": 4245
+   },
+   {
+    "word": "dictate",
+    "phon": "'dikteit",
+    "en": "an authoritative rule; a guiding principle",
+    "zh": "听写, 口述, 口授；口述, 使听写, 命令；命令, 指挥, 指令",
+    "frq": 4933
+   },
+   {
+    "word": "dictation",
+    "phon": "dik'teiʃәn",
+    "en": "speech intended for reproduction in writing; matter that has been dictated and transcribed; a dictat",
+    "zh": "听写, 口述, 命令",
+    "frq": 21756
+   },
+   {
+    "word": "dictator",
+    "phon": "'dikteitә",
+    "en": "a speaker who dictates to a secretary or a recording machine; a ruler who is unconstrained by law",
+    "zh": "命令者, 独裁者",
+    "frq": 6740
+   },
+   {
+    "word": "contradict",
+    "phon": ".kɒntrә'dikt",
+    "en": "be in contradiction with; deny the truth of",
+    "zh": "反驳, 与...抵触, 与...矛盾；反驳",
+    "frq": 6863
+   },
+   {
+    "word": "contradiction",
+    "phon": ".kɒntrә'dikʃәn",
+    "en": "opposition between two conflicting forces or ideas; a statement that is necessarily false",
+    "zh": "反驳, 矛盾；矛盾, 否认, 反驳",
+    "frq": 5451
+   },
+   {
+    "word": "indict",
+    "phon": "in'dait",
+    "en": "accuse formally of a crime",
+    "zh": "起诉, 控告, 指控；控告, 揭发, 对...起诉",
+    "frq": 6483
+   },
+   {
+    "word": "indictment",
+    "phon": "in'daitmәnt",
+    "en": "a formal document written for a prosecuting attorney charging a person with some offense; an accusat",
+    "zh": "起诉, 控告, 起诉状；起诉书",
+    "frq": 5627
+   },
+   {
+    "word": "edict",
+    "phon": "'i:dikt",
+    "en": "a formal or authoritative proclamation",
+    "zh": "布告, 法令",
+    "frq": 15238
+   },
+   {
+    "word": "jurisdiction",
+    "phon": ".dʒuәris'dikʃәn",
+    "en": "in law; the territory within which power can be exercised",
+    "zh": "司法权, 审判权, 管辖权；法律管辖权, 审判权",
+    "frq": 4651
+   },
+   {
+    "word": "benediction",
+    "phon": ".beni'dikʃәn",
+    "en": "a ceremonial prayer invoking divine protection",
+    "zh": "祝福",
+    "frq": 21353
+   },
+   {
+    "word": "malediction",
+    "phon": ".mæli'dikʃәn",
+    "en": "the act of calling down a curse that invokes evil (and usually serves as an insult)",
+    "zh": "咒, 坏话",
+    "frq": 43594
+   },
+   {
+    "word": "dictum",
+    "phon": "'diktәm",
+    "en": "an authoritative declaration; an opinion voiced by a judge on a point of law not directly bearing on",
+    "zh": "声明, 格言, 法官意见；宣言, 声明, 法官的意见",
+    "frq": 17196
+   },
+   {
+    "word": "addict",
+    "phon": "ә'dikt",
+    "en": "someone who is so ardently devoted to something that it resembles an addiction; someone who is physi",
+    "zh": "使沉溺, 使上瘾；入迷的人, 上瘾者",
+    "frq": 6091
+   },
+   {
+    "word": "addiction",
+    "phon": "ә'dikʃәn",
+    "en": "being abnormally tolerant to and dependent on something that is psychologically or physically habit-",
+    "zh": "入迷, 瘾；瘾, 癖嗜",
+    "frq": 5177
+   }
+  ]
+ },
+ {
+  "root": "port",
+  "meaning": "搬运",
+  "origin": "From Latin portare 'to carry'.",
+  "words": [
+   {
+    "word": "import",
+    "phon": "im'pɒ:t",
+    "en": "commodities (goods or services) bought from a foreign country; an imported person brought from a for",
+    "zh": "进口货, 进口, 输入, 含义, 重要性；输入, 引入, 进口, 含...的意思, 重要；有关系；引入",
+    "frq": 4050
+   },
+   {
+    "word": "export",
+    "phon": "ik'spɒ:t",
+    "en": "commodities (goods or services) sold to a foreign country",
+    "zh": "输出品, 输出；输出, 出口；输出物资；导出",
+    "frq": 3456
+   },
+   {
+    "word": "transport",
+    "phon": "træns'pɒ:t",
+    "en": "an exchange of molecules (and their kinetic energy and momentum) across the boundary between adjacen",
+    "zh": "运输, 运输工具, 激动, 狂喜, 流放犯；传送, 运输, 流放；传送",
+    "frq": 4640
+   },
+   {
+    "word": "report",
+    "phon": "ri'pɒ:t",
+    "en": "a written document describing the findings of some individual or group; the act of informing by verb",
+    "zh": "报告, 报道, 传说, 案情报告, 爆炸声, 成绩单；报告, 汇报, 转述, 报道, 揭发, 使报到；报告, 写报道, 报到；报告",
+    "frq": 450
+   },
+   {
+    "word": "support",
+    "phon": "sә'pɒ:t",
+    "en": "the activity of providing for or maintaining by supplying with money or necessities; aiding the caus",
+    "zh": "支持, 支撑, 援助, 供养, 支撑物；支援, 支撑, 帮助, 支持, 忍受, 供养, 证实；后援；支持",
+    "frq": 524
+   },
+   {
+    "word": "important",
+    "phon": "im'pɒ:tәnt",
+    "en": "of great significance or value; having or suggesting a consciousness of high position",
+    "zh": "重要的, 有地位的, 大量的, 显要的, 自负的；要点",
+    "frq": 266
+   },
+   {
+    "word": "portable",
+    "phon": "'pɒ:tәbl",
+    "en": "easily or conveniently transported; of a motor designed to be attached to the outside of a boat's hu",
+    "zh": "可携带的, 可搬运的, 可移动的；可移植的",
+    "frq": 5441
+   },
+   {
+    "word": "porter",
+    "phon": "'pɒ:tә",
+    "en": "a person employed to carry luggage and supplies; United States writer of novels and short stories (1",
+    "zh": "大楼管理员, 门房, 搬运工人, 侍者, 服务员；搬运车；搬运工人",
+    "frq": 11418
+   },
+   {
+    "word": "portfolio",
+    "phon": "pɒ:t'fәuliәu",
+    "en": "a large, flat, thin case for carrying loose papers or drawings or maps; usually leather; a set of pi",
+    "zh": "皮包, 公文包, 部长职务, 有价证券财产目录, 艺术代表作选辑；公文包, 文件夹, 阁员职务",
+    "frq": 3809
+   },
+   {
+    "word": "opportunity",
+    "phon": ".ɒpә'tju:niti",
+    "en": "a possibility due to a favorable combination of circumstances",
+    "zh": "机会, 时机",
+    "frq": 625
+   },
+   {
+    "word": "opportune",
+    "phon": ".ɒpә'tju:n",
+    "en": "suitable or at a time that is suitable or advantageous especially for a particular purpose",
+    "zh": "恰好的, 时机适宜的, 适当的",
+    "frq": 22301
+   },
+   {
+    "word": "deport",
+    "phon": "di'pɒ:t",
+    "en": "behave in a certain manner; hand over to the authorities of another country",
+    "zh": "举止, 驱逐出境；放逐, 驱逐, 递解",
+    "frq": 10824
+   },
+   {
+    "word": "deportation",
+    "phon": ".di:pɒ:'teiʃәn",
+    "en": "the expulsion from a country of an undesirable alien",
+    "zh": "驱逐出境, 放逐；递解出境, 放逐, 驱逐",
+    "frq": 11709
+   },
+   {
+    "word": "rapport",
+    "phon": "ræ'pɒ:",
+    "en": "a relationship of mutual understanding or trust and agreement between people",
+    "zh": "关系, 融洽, 一致；关系, 协调(病人与医师间), 感通(唯心的灵交术时)",
+    "frq": 12070
+   },
+   {
+    "word": "deportment",
+    "phon": "di'pɒ:tmәnt",
+    "en": "(behavioral attributes) the way a person behaves toward other people",
+    "zh": "行为, 举止",
+    "frq": 26949
+   },
+   {
+    "word": "sport",
+    "phon": "spɒ:t",
+    "en": "an active diversion requiring physical exertion and competition; the occupation of athletes who comp",
+    "zh": "运动, 游戏, 娱乐, 消遣, 玩笑；运动的, 户外穿戴的；游戏, 参加体育运动, 戏弄, 产生变种；炫耀, 使产生变种",
+    "frq": 666
+   },
+   {
+    "word": "supportive",
+    "phon": "sә'pɔ:tiv",
+    "en": "furnishing support or assistance",
+    "zh": "支撑, 支承, 资助, 赞助, 支援, 经受, 忍受, 扶养, 证实, 鼓励, 维持, 伴奏",
+    "frq": 4522
+   },
+   {
+    "word": "importer",
+    "phon": "im'pɒ:tә",
+    "en": "someone whose business involves importing goods from outside (especially from a foreign country)",
+    "zh": "输入者, 进口商；进口商, 输入者",
+    "frq": 13786
+   },
+   {
+    "word": "exporter",
+    "phon": "ik'spɒ:tә",
+    "en": "a businessperson who transports goods abroad (for sale)",
+    "zh": "出口商, 输出者, 出口公司；出口商, 输出者",
+    "frq": 10867
+   },
+   {
+    "word": "transportation",
+    "phon": ".trænspә'teiʃәn",
+    "en": "the act of moving something from one location to another; the commercial enterprise of moving goods ",
+    "zh": "运输, 输送, 交通车辆；运转, 运输, 运输费",
+    "frq": 2374
+   },
+   {
+    "word": "purport",
+    "phon": "'pә:pɒ:t",
+    "en": "have the often specious appearance of being, intending, or claiming",
+    "zh": "意义, 要旨, 目的；意味着, 声称, 打算",
+    "frq": 11339
+   }
+  ]
+ },
+ {
+  "root": "ject / jet",
+  "meaning": "扔、掷",
+  "origin": "From Latin jacere 'to throw' (past stem ject-).",
+  "words": [
+   {
+    "word": "reject",
+    "phon": "ri'dʒekt",
+    "en": "refuse to accept or acknowledge; reject with contempt",
+    "zh": "被拒之人, 被弃之物, 不合格品, 次品；拒绝, 抵制, 否决, 驳回, 丢弃, 呕出",
+    "frq": 2029
+   },
+   {
+    "word": "rejection",
+    "phon": "ri'dʒekʃәn",
+    "en": "the act of rejecting something; the state of being rejected",
+    "zh": "拒绝, 抛弃, 驳回, 被抛弃的东西, 呕出物；报废；拒收",
+    "frq": 5003
+   },
+   {
+    "word": "project",
+    "phon": "'prɒdʒekt",
+    "en": "a planned undertaking",
+    "zh": "计划, 设计, 事业；计划, 设计, 投掷, 发射, 使凸出, 放映；凸出",
+    "frq": 534
+   },
+   {
+    "word": "projection",
+    "phon": "prә'dʒekʃәn",
+    "en": "a prediction made by extrapolating from past observations; the projection of an image from a film on",
+    "zh": "发射, 计划, 突出部分, 设计, 推测；投影",
+    "frq": 4755
+   },
+   {
+    "word": "inject",
+    "phon": "in'dʒekt",
+    "en": "give an injection to; to introduce (a new aspect or element)",
+    "zh": "注射, 注入, 使入轨；注射",
+    "frq": 5597
+   },
+   {
+    "word": "injection",
+    "phon": "in'dʒekʃәn",
+    "en": "the forceful insertion of a substance under pressure; any solution that is injected (as into the ski",
+    "zh": "注射, 注射剂；注入；注射",
+    "frq": 5734
+   },
+   {
+    "word": "eject",
+    "phon": "i'dʒekt",
+    "en": "put out or expel from a place; leave an aircraft rapidly, using an ejection seat or capsule",
+    "zh": "逐放, 放逐, 喷射；排出",
+    "frq": 10924
+   },
+   {
+    "word": "object",
+    "phon": "'ɒbdʒekt",
+    "en": "a tangible and visible entity; an entity that can cast a shadow; a constituent that is acted upon",
+    "zh": "物体, 目标, 目的, 对象, 宾语, 客体；反对, 抱反感；提出...来反对；对象",
+    "frq": 1153
+   },
+   {
+    "word": "objection",
+    "phon": "әb'dʒekʃәn",
+    "en": "the speech act of objecting; a procedure whereby a party to a suit says that a particular line of qu",
+    "zh": "异议, 反对, 不喜欢, 缺点, 缺陷, 妨碍, 拒绝之理由；异议, 反对, 抗议",
+    "frq": 4737
+   },
+   {
+    "word": "subject",
+    "phon": "'sʌbdʒekt",
+    "en": "the subject matter of a conversation or discussion; something (a person or object or scene) selected",
+    "zh": "科目, 主题, 臣民, 主语, 题目, (事物的)经受者, 学科, 受治疗者, 原因, 理由；服从的, 易患...的, 隶属的, 受支配的；在...条件下；使隶",
+    "frq": 670
+   },
+   {
+    "word": "subjective",
+    "phon": "sәb'dʒektiv",
+    "en": "taking place within the mind and modified by individual bias",
+    "zh": "主观的, 个人的；主观的, 自觉的",
+    "frq": 5947
+   },
+   {
+    "word": "interject",
+    "phon": ".intә'dʒekt",
+    "en": "to insert between other elements",
+    "zh": "插嘴, 突然插入",
+    "frq": 14440
+   },
+   {
+    "word": "adjective",
+    "phon": "'ædʒiktiv",
+    "en": "a word that expresses an attribute of something; the word class that qualifies nouns",
+    "zh": "形容词；形容词的, 从属的",
+    "frq": 10317
+   },
+   {
+    "word": "trajectory",
+    "phon": "trә'dʒektri",
+    "en": "the path followed by an object moving through space",
+    "zh": "轨道, 弹道, 轨线；轨道",
+    "frq": 7728
+   },
+   {
+    "word": "conjecture",
+    "phon": "kәn'dʒektʃә",
+    "en": "reasoning that involves the formation of conclusions from incomplete evidence",
+    "zh": "推测, 猜想, 揣摩；推测；猜测",
+    "frq": 14535
+   },
+   {
+    "word": "abject",
+    "phon": "'æbdʒekt",
+    "en": "of the most contemptible kind; most unfortunate or miserable",
+    "zh": "绝望无助的, 可怜的, 糟透的, 卑鄙的, 自卑的；卑鄙的, 卑下的, 可怜的",
+    "frq": 16479
+   },
+   {
+    "word": "dejected",
+    "phon": "di'dʒektid",
+    "en": "affected or marked by low spirits",
+    "zh": "沮丧的, 灰心的",
+    "frq": 21137
+   },
+   {
+    "word": "jettison",
+    "phon": "'dʒetisәn",
+    "en": "throw away, of something encumbering; throw as from an airplane",
+    "zh": "投弃, 投弃货物；抛弃, 船货投海",
+    "frq": 16098
+   },
+   {
+    "word": "jet",
+    "phon": "dʒet",
+    "en": "an airplane powered by one or more jet engines; the occurrence of a sudden discharge (as of liquid)",
+    "zh": "喷射流, 喷嘴, 煤玉；射出, 迸出, 喷射；黑而发亮的, 墨黑的",
+    "frq": 3144
+   }
+  ]
+ },
+ {
+  "root": "duc / duct",
+  "meaning": "引导",
+  "origin": "From Latin ducere 'to lead' (past stem duct-).",
+  "words": [
+   {
+    "word": "conduct",
+    "phon": "'kɔndʌkt, -dәkt",
+    "en": "direct the course of; manage or control; lead, as in the performance of a composition; Barenboim con",
+    "zh": "行为, 举动, 指导；为人, 指挥, 管理, 实施；领导, 传导, 指挥",
+    "frq": 1162
+   },
+   {
+    "word": "product",
+    "phon": "'prɒdʌkt",
+    "en": "an artifact that has been created by someone or some process; a quantity obtained by multiplication",
+    "zh": "产品, 结果, 乘积；生产物",
+    "frq": 569
+   },
+   {
+    "word": "produce",
+    "phon": "prә'dju:s",
+    "en": "fresh fruits and vegetable grown for the market",
+    "zh": "生产品, 物产, 后代；产生, 生产, 提出, 出示；生产, 制造",
+    "frq": 542
+   },
+   {
+    "word": "producer",
+    "phon": "prә'dju:sә",
+    "en": "someone who finds financing for and supervises the making and presentation of a show (play or film o",
+    "zh": "生产者, 制作者, 制作人；发生器；(炉煤气)发生炉；制气炉；生产者",
+    "frq": 1845
+   },
+   {
+    "word": "reduce",
+    "phon": "ri'dju:s",
+    "en": "cut down on; make a reduction in; make less complex",
+    "zh": "减少, 分解, 降低, 使衰退, 把...分解, 把...归纳；减少, 减肥, 缩小；缩小",
+    "frq": 701
+   },
+   {
+    "word": "reduction",
+    "phon": "ri'dʌkʃәn",
+    "en": "any process in which electrons are added to an atom or ion (as by removing oxygen or adding hydrogen",
+    "zh": "减少, 缩影, 变化；还原",
+    "frq": 2270
+   },
+   {
+    "word": "introduce",
+    "phon": ".intrә'dju:s",
+    "en": "cause to come to know personally; bring something new to an environment",
+    "zh": "介绍, 引入, 采用, 输入；引进, 输入, 介绍",
+    "frq": 1225
+   },
+   {
+    "word": "introduction",
+    "phon": ".intrә'dʌkʃәn",
+    "en": "the act of beginning something new; the first section of a communication",
+    "zh": "介绍, 传入, 采用, 初步",
+    "frq": 2904
+   },
+   {
+    "word": "educate",
+    "phon": "'edjukeit",
+    "en": "give an education to; teach or refine to be discriminative in taste or judgment",
+    "zh": "教育, 培养, 训练",
+    "frq": 3033
+   },
+   {
+    "word": "deduce",
+    "phon": "di'dju:s",
+    "en": "reason by deduction; establish by deduction; conclude by reasoning; in logic",
+    "zh": "推论, 演绎出；推断, 推出, 演绎",
+    "frq": 13290
+   },
+   {
+    "word": "deduct",
+    "phon": "di'dʌkt",
+    "en": "make a subtraction; retain and refrain from disbursing; of payments",
+    "zh": "扣除, 减去；扣除, 减去, 折扣",
+    "frq": 11281
+   },
+   {
+    "word": "deduction",
+    "phon": "di'dʌkʃәn",
+    "en": "an amount or percentage deducted; something that is inferred (deduced or entailed or implied)",
+    "zh": "减除, 扣除, 减除额, 推论；演绎, 推论",
+    "frq": 7020
+   },
+   {
+    "word": "induce",
+    "phon": "in'dju:s",
+    "en": "cause to arise; cause to do; cause to act in a specified manner",
+    "zh": "引诱, 招致, 归纳出, 感应；诱导, 感应",
+    "frq": 5257
+   },
+   {
+    "word": "inductive",
+    "phon": "in'dʌktiv",
+    "en": "arising from inductance; of reasoning; proceeding from particular facts to a general conclusion",
+    "zh": "归纳的, 感应的；感应瓦特计",
+    "frq": 20226
+   },
+   {
+    "word": "seduce",
+    "phon": "si'dju:s",
+    "en": "induce to have sex; lure or entice away from duty, principles, or proper conduct",
+    "zh": "唆使, 怂恿, 引诱, 诱奸；勾引, 诱惑, 诱奸",
+    "frq": 8606
+   },
+   {
+    "word": "abduct",
+    "phon": "æb'dʌkt",
+    "en": "pull away from the body",
+    "zh": "诱拐, 绑架, 使外展；外展, 展",
+    "frq": 11439
+   },
+   {
+    "word": "duct",
+    "phon": "dʌkt",
+    "en": "a bodily passage or tube lined with epithelial cells and conveying a secretion or other substance; a",
+    "zh": "管, 输送管；通过管道输送",
+    "frq": 8636
+   },
+   {
+    "word": "aqueduct",
+    "phon": "'ækwidʌkt",
+    "en": "a conduit that resembles a bridge but carries water over a valley",
+    "zh": "水管, 沟渠, 导管；水管",
+    "frq": 20964
+   },
+   {
+    "word": "viaduct",
+    "phon": "'vaiәdʌkt",
+    "en": "bridge consisting of a series of arches supported by piers used to carry a road (or railroad) over a",
+    "zh": "高架桥",
+    "frq": 28602
+   },
+   {
+    "word": "induct",
+    "phon": "in'dʌkt",
+    "en": "place ceremoniously or formally in an office or position; admit as a member",
+    "zh": "引导, 使入门, 引入, 使就职",
+    "frq": 14759
+   },
+   {
+    "word": "subdue",
+    "phon": "sәb'dju:",
+    "en": "put down by force or intimidation; to put down by force or authority",
+    "zh": "使服从, 压制, 减弱, 抑制, 克制",
+    "frq": 12577
+   },
+   {
+    "word": "duke",
+    "phon": "dju:k",
+    "en": "a British peer of the highest rank; a nobleman (in various countries) of high rank",
+    "zh": "公爵",
+    "frq": 11516
+   },
+   {
+    "word": "conducive",
+    "phon": "kәn'dju:siv",
+    "en": "tending to bring about; being partly responsible for",
+    "zh": "有益于...的, 有助于...的, 助长的",
+    "frq": 11002
+   },
+   {
+    "word": "deductive",
+    "phon": "di'dʌktiv",
+    "en": "relating to logical deduction; involving inferences from general principles",
+    "zh": "推论的, 演绎的；推定的, 推断的, 演绎的",
+    "frq": 23788
+   },
+   {
+    "word": "misconduct",
+    "phon": ".mis'kɒndʌkt",
+    "en": "bad or dishonest management by persons supposed to act on another's behalf",
+    "zh": "办错, 使行为不端；办错, 渎职, 通奸",
+    "frq": 8926
+   },
+   {
+    "word": "conduit",
+    "phon": "'kɒndit",
+    "en": "a passage (a pipe or tunnel) through which water or electric wires can pass",
+    "zh": "导管, 水管, 沟渠；导管",
+    "frq": 12054
+   }
+  ]
+ }
+]

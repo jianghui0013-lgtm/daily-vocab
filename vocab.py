@@ -49,6 +49,7 @@ DEFAULT_CFG = {
     "news_count": 10,         # 每天抓几条
     "pick_size": 21,          # 推荐区同时摆几个词（3 列 × 7 行）
     "review_quota": 50,       # 一组推多少个词来复习
+    "roots_per_day": 5,       # 每天推几个词根词族来背
 }
 
 
@@ -300,6 +301,21 @@ CREATE TABLE IF NOT EXISTS root_family (
   origin     TEXT,
   story      TEXT,
   created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS root_seed (
+  root       TEXT PRIMARY KEY,
+  meaning    TEXT,
+  origin     TEXT,
+  words      TEXT NOT NULL,
+  seq        INTEGER NOT NULL DEFAULT 0,
+  served     INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS root_plan (
+  day        TEXT NOT NULL,
+  root       TEXT NOT NULL,
+  PRIMARY KEY (day, root)
 );
 """
 
@@ -2235,6 +2251,74 @@ def root_related(conn, root, exclude, limit=10):
     return out
 
 
+# 词根词族种子数据（JSON 数组，一行一个词根）。由 seed/make_roots.py 从 ECDICT
+# 生成，词形已逐一核验。想加词根：改 make_roots.py 的 ROOTS 列表重跑，再粘进来。
+ROOT_SEED_JSON = """[
+{"root":"spect / spec","meaning":"看","origin":"From Latin specere 'to look at' (past stem spect-).","words":[{"w":"inspect","ph":"in'spekt","en":"look over carefully","zh":"检查, 检阅, 检验；检查"},{"w":"respect","ph":"ri'spekt","en":"(usually preceded by `in') a detail or point; an attitude of admiration or esteem","zh":"尊敬, 尊重, 问候；尊敬, 注意, 遵守"},{"w":"expect","ph":"iks'pekt","en":"regard something as probable or likely; look forward to the probable occurrence of","zh":"预期, 盼望, 期待"},{"w":"suspect","ph":"sә'spekt","en":"someone who is under suspicion","zh":"被怀疑者, 嫌疑犯；令人怀疑的, 不可信的, 可疑的；怀疑, 猜想"},{"w":"prospect","ph":"'prɒspekt","en":"the possibility of future success","zh":"景色, 展望；勘探, 勘察；勘探, 有前途"},{"w":"aspect","ph":"'æspekt","en":"a distinct feature or element in a problem; a characteristic to be considered","zh":"外观, 方面, 面貌, 方向；方面, 局面；外观"},{"w":"spectator","ph":"spek'teitә","en":"a close observer; someone who looks at something (such as an exhibition of some kind)","zh":"观众, 目击者, 旁观者"},{"w":"spectacle","ph":"'spektәkl","en":"something or someone seen (especially a notable or unusual sight); an elaborate and remarkable displ","zh":"引人羡慕的东西, 景象, 眼镜, 场面, 公开展示"},{"w":"speculate","ph":"'spekjuleit","en":"to believe especially on uncertain or tentative grounds; talk over conjecturally, or review in an id","zh":"深思, 推测, 投机；投机"},{"w":"spectrum","ph":"'spektrәm","en":"an ordered array of the components of an emission or wave; a broad range of related objects or value","zh":"光谱, 范围, 系列；光谱"},{"w":"specify","ph":"'spesifai","en":"decide upon or fix definitely; determine the essential quality of","zh":"详列, 指定, 说明；指定"},{"w":"specific","ph":"spi'sifik","en":"a medicine that has a mitigating effect on a specific disease","zh":"特效药, 特性；特殊的, 明确的, 具有特效的, 特定地, 具体地"},{"w":"species","ph":"'spi:ʃiz","en":"taxonomic group whose members can interbreed; a specific kind of something","zh":"种, 类, 外形；茶剂；种"},{"w":"specimen","ph":"'spesimәn","en":"an example regarded as typical of its class; a bit of tissue or blood or urine that is taken for dia","zh":"样品, 标本, 试料；试样"},{"w":"retrospect","ph":"'retrәspekt","en":"contemplation of things past","zh":"回顾, 追忆, 回溯；回顾, 追忆"},{"w":"perspective","ph":"pә'spektiv","en":"the appearance of things relative to one another as determined by their distance from the viewer","zh":"远景, 透视感, (观察问题的)视角, 透视法, 看法, 透视图；透视的, 透视法的；透视"},{"w":"circumspect","ph":"'sә:kәmspekt","en":"heedful of potential consequences","zh":"细心的, 慎重的"},{"w":"conspicuous","ph":"kәn'spikjuәs","en":"obvious to the eye or mind","zh":"显著的, 显眼的, 出众的"},{"w":"despise","ph":"di'spaiz","en":"look down on with disdain","zh":"轻视"},{"w":"prospectus","ph":"prәs'pektәs","en":"a formal written offer to sell securities (filed with the SEC) that sets forth a plan for a (propose","zh":"创办计划书, (内容)说明书, 内容简介；(募债)说明书"},{"w":"introspection","ph":".intrәu'spekʃәn","en":"the contemplation of your own thoughts and desires and conduct","zh":"内省, 反省；内省"},{"w":"irrespective","ph":".iri'spektiv","en":"in spite of everything; without regard to drawbacks","zh":"不顾的, 无关的, 没关系的"},{"w":"specification","ph":".spesifi'keiʃәn","en":"a detailed description of design criteria for a piece of work; naming explicitly","zh":"规格, 详述, 详细说明书；规范；形式说明；说明；说明书；规格"},{"w":"inspector","ph":"in'spektә","en":"a high ranking police officer","zh":"检查员, 巡视员；检查员"},{"w":"retrospective","ph":".retrә'spektiv","en":"concerned with or related to the past","zh":"回顾的, 怀旧的, 在后面的；回顾展"},{"w":"auspicious","ph":"ɒ:'spiʃәs","en":"auguring favorable circumstances and good luck","zh":"吉兆的, 幸运的"}]},
+{"root":"dict","meaning":"说","origin":"From Latin dicere / dictare 'to say, to speak repeatedly'.","words":[{"w":"predict","ph":"pri'dikt","en":"make a prediction about; tell in advance","zh":"预知, 预言, 预报"},{"w":"predictable","ph":"pri'diktәbl","en":"capable of being foretold","zh":"可预言的"},{"w":"verdict","ph":"'vә:dikt","en":"the findings of a jury on issues of fact submitted to it for decision; can be used in formulating a ","zh":"裁决, 判决, 判断性意见, 定论, 结论；定论, 判断, 意见"},{"w":"dictate","ph":"'dikteit","en":"an authoritative rule; a guiding principle","zh":"听写, 口述, 口授；口述, 使听写, 命令；命令, 指挥, 指令"},{"w":"dictation","ph":"dik'teiʃәn","en":"speech intended for reproduction in writing; matter that has been dictated and transcribed; a dictat","zh":"听写, 口述, 命令"},{"w":"dictator","ph":"'dikteitә","en":"a speaker who dictates to a secretary or a recording machine; a ruler who is unconstrained by law","zh":"命令者, 独裁者"},{"w":"contradict","ph":".kɒntrә'dikt","en":"be in contradiction with; deny the truth of","zh":"反驳, 与...抵触, 与...矛盾；反驳"},{"w":"contradiction","ph":".kɒntrә'dikʃәn","en":"opposition between two conflicting forces or ideas; a statement that is necessarily false","zh":"反驳, 矛盾；矛盾, 否认, 反驳"},{"w":"indict","ph":"in'dait","en":"accuse formally of a crime","zh":"起诉, 控告, 指控；控告, 揭发, 对...起诉"},{"w":"indictment","ph":"in'daitmәnt","en":"a formal document written for a prosecuting attorney charging a person with some offense; an accusat","zh":"起诉, 控告, 起诉状；起诉书"},{"w":"edict","ph":"'i:dikt","en":"a formal or authoritative proclamation","zh":"布告, 法令"},{"w":"jurisdiction","ph":".dʒuәris'dikʃәn","en":"in law; the territory within which power can be exercised","zh":"司法权, 审判权, 管辖权；法律管辖权, 审判权"},{"w":"benediction","ph":".beni'dikʃәn","en":"a ceremonial prayer invoking divine protection","zh":"祝福"},{"w":"malediction","ph":".mæli'dikʃәn","en":"the act of calling down a curse that invokes evil (and usually serves as an insult)","zh":"咒, 坏话"},{"w":"dictum","ph":"'diktәm","en":"an authoritative declaration; an opinion voiced by a judge on a point of law not directly bearing on","zh":"声明, 格言, 法官意见；宣言, 声明, 法官的意见"},{"w":"addict","ph":"ә'dikt","en":"someone who is so ardently devoted to something that it resembles an addiction; someone who is physi","zh":"使沉溺, 使上瘾；入迷的人, 上瘾者"},{"w":"addiction","ph":"ә'dikʃәn","en":"being abnormally tolerant to and dependent on something that is psychologically or physically habit-","zh":"入迷, 瘾；瘾, 癖嗜"}]},
+{"root":"port","meaning":"搬运","origin":"From Latin portare 'to carry'.","words":[{"w":"import","ph":"im'pɒ:t","en":"commodities (goods or services) bought from a foreign country; an imported person brought from a for","zh":"进口货, 进口, 输入, 含义, 重要性；输入, 引入, 进口, 含...的意思, 重要；有关系；引入"},{"w":"export","ph":"ik'spɒ:t","en":"commodities (goods or services) sold to a foreign country","zh":"输出品, 输出；输出, 出口；输出物资；导出"},{"w":"transport","ph":"træns'pɒ:t","en":"an exchange of molecules (and their kinetic energy and momentum) across the boundary between adjacen","zh":"运输, 运输工具, 激动, 狂喜, 流放犯；传送, 运输, 流放；传送"},{"w":"report","ph":"ri'pɒ:t","en":"a written document describing the findings of some individual or group; the act of informing by verb","zh":"报告, 报道, 传说, 案情报告, 爆炸声, 成绩单；报告, 汇报, 转述, 报道, 揭发, 使报到；报告, 写报道, 报到；报告"},{"w":"support","ph":"sә'pɒ:t","en":"the activity of providing for or maintaining by supplying with money or necessities; aiding the caus","zh":"支持, 支撑, 援助, 供养, 支撑物；支援, 支撑, 帮助, 支持, 忍受, 供养, 证实；后援；支持"},{"w":"important","ph":"im'pɒ:tәnt","en":"of great significance or value; having or suggesting a consciousness of high position","zh":"重要的, 有地位的, 大量的, 显要的, 自负的；要点"},{"w":"portable","ph":"'pɒ:tәbl","en":"easily or conveniently transported; of a motor designed to be attached to the outside of a boat's hu","zh":"可携带的, 可搬运的, 可移动的；可移植的"},{"w":"porter","ph":"'pɒ:tә","en":"a person employed to carry luggage and supplies; United States writer of novels and short stories (1","zh":"大楼管理员, 门房, 搬运工人, 侍者, 服务员；搬运车；搬运工人"},{"w":"portfolio","ph":"pɒ:t'fәuliәu","en":"a large, flat, thin case for carrying loose papers or drawings or maps; usually leather; a set of pi","zh":"皮包, 公文包, 部长职务, 有价证券财产目录, 艺术代表作选辑；公文包, 文件夹, 阁员职务"},{"w":"opportunity","ph":".ɒpә'tju:niti","en":"a possibility due to a favorable combination of circumstances","zh":"机会, 时机"},{"w":"opportune","ph":".ɒpә'tju:n","en":"suitable or at a time that is suitable or advantageous especially for a particular purpose","zh":"恰好的, 时机适宜的, 适当的"},{"w":"deport","ph":"di'pɒ:t","en":"behave in a certain manner; hand over to the authorities of another country","zh":"举止, 驱逐出境；放逐, 驱逐, 递解"},{"w":"deportation","ph":".di:pɒ:'teiʃәn","en":"the expulsion from a country of an undesirable alien","zh":"驱逐出境, 放逐；递解出境, 放逐, 驱逐"},{"w":"rapport","ph":"ræ'pɒ:","en":"a relationship of mutual understanding or trust and agreement between people","zh":"关系, 融洽, 一致；关系, 协调(病人与医师间), 感通(唯心的灵交术时)"},{"w":"deportment","ph":"di'pɒ:tmәnt","en":"(behavioral attributes) the way a person behaves toward other people","zh":"行为, 举止"},{"w":"sport","ph":"spɒ:t","en":"an active diversion requiring physical exertion and competition; the occupation of athletes who comp","zh":"运动, 游戏, 娱乐, 消遣, 玩笑；运动的, 户外穿戴的；游戏, 参加体育运动, 戏弄, 产生变种；炫耀, 使产生变种"},{"w":"supportive","ph":"sә'pɔ:tiv","en":"furnishing support or assistance","zh":"支撑, 支承, 资助, 赞助, 支援, 经受, 忍受, 扶养, 证实, 鼓励, 维持, 伴奏"},{"w":"importer","ph":"im'pɒ:tә","en":"someone whose business involves importing goods from outside (especially from a foreign country)","zh":"输入者, 进口商；进口商, 输入者"},{"w":"exporter","ph":"ik'spɒ:tә","en":"a businessperson who transports goods abroad (for sale)","zh":"出口商, 输出者, 出口公司；出口商, 输出者"},{"w":"transportation","ph":".trænspә'teiʃәn","en":"the act of moving something from one location to another; the commercial enterprise of moving goods ","zh":"运输, 输送, 交通车辆；运转, 运输, 运输费"},{"w":"purport","ph":"'pә:pɒ:t","en":"have the often specious appearance of being, intending, or claiming","zh":"意义, 要旨, 目的；意味着, 声称, 打算"}]},
+{"root":"ject / jet","meaning":"扔、掷","origin":"From Latin jacere 'to throw' (past stem ject-).","words":[{"w":"reject","ph":"ri'dʒekt","en":"refuse to accept or acknowledge; reject with contempt","zh":"被拒之人, 被弃之物, 不合格品, 次品；拒绝, 抵制, 否决, 驳回, 丢弃, 呕出"},{"w":"rejection","ph":"ri'dʒekʃәn","en":"the act of rejecting something; the state of being rejected","zh":"拒绝, 抛弃, 驳回, 被抛弃的东西, 呕出物；报废；拒收"},{"w":"project","ph":"'prɒdʒekt","en":"a planned undertaking","zh":"计划, 设计, 事业；计划, 设计, 投掷, 发射, 使凸出, 放映；凸出"},{"w":"projection","ph":"prә'dʒekʃәn","en":"a prediction made by extrapolating from past observations; the projection of an image from a film on","zh":"发射, 计划, 突出部分, 设计, 推测；投影"},{"w":"inject","ph":"in'dʒekt","en":"give an injection to; to introduce (a new aspect or element)","zh":"注射, 注入, 使入轨；注射"},{"w":"injection","ph":"in'dʒekʃәn","en":"the forceful insertion of a substance under pressure; any solution that is injected (as into the ski","zh":"注射, 注射剂；注入；注射"},{"w":"eject","ph":"i'dʒekt","en":"put out or expel from a place; leave an aircraft rapidly, using an ejection seat or capsule","zh":"逐放, 放逐, 喷射；排出"},{"w":"object","ph":"'ɒbdʒekt","en":"a tangible and visible entity; an entity that can cast a shadow; a constituent that is acted upon","zh":"物体, 目标, 目的, 对象, 宾语, 客体；反对, 抱反感；提出...来反对；对象"},{"w":"objection","ph":"әb'dʒekʃәn","en":"the speech act of objecting; a procedure whereby a party to a suit says that a particular line of qu","zh":"异议, 反对, 不喜欢, 缺点, 缺陷, 妨碍, 拒绝之理由；异议, 反对, 抗议"},{"w":"subject","ph":"'sʌbdʒekt","en":"the subject matter of a conversation or discussion; something (a person or object or scene) selected","zh":"科目, 主题, 臣民, 主语, 题目, (事物的)经受者, 学科, 受治疗者, 原因, 理由；服从的, 易患...的, 隶属的, 受支配的；在...条件下；使隶"},{"w":"subjective","ph":"sәb'dʒektiv","en":"taking place within the mind and modified by individual bias","zh":"主观的, 个人的；主观的, 自觉的"},{"w":"interject","ph":".intә'dʒekt","en":"to insert between other elements","zh":"插嘴, 突然插入"},{"w":"adjective","ph":"'ædʒiktiv","en":"a word that expresses an attribute of something; the word class that qualifies nouns","zh":"形容词；形容词的, 从属的"},{"w":"trajectory","ph":"trә'dʒektri","en":"the path followed by an object moving through space","zh":"轨道, 弹道, 轨线；轨道"},{"w":"conjecture","ph":"kәn'dʒektʃә","en":"reasoning that involves the formation of conclusions from incomplete evidence","zh":"推测, 猜想, 揣摩；推测；猜测"},{"w":"abject","ph":"'æbdʒekt","en":"of the most contemptible kind; most unfortunate or miserable","zh":"绝望无助的, 可怜的, 糟透的, 卑鄙的, 自卑的；卑鄙的, 卑下的, 可怜的"},{"w":"dejected","ph":"di'dʒektid","en":"affected or marked by low spirits","zh":"沮丧的, 灰心的"},{"w":"jettison","ph":"'dʒetisәn","en":"throw away, of something encumbering; throw as from an airplane","zh":"投弃, 投弃货物；抛弃, 船货投海"},{"w":"jet","ph":"dʒet","en":"an airplane powered by one or more jet engines; the occurrence of a sudden discharge (as of liquid)","zh":"喷射流, 喷嘴, 煤玉；射出, 迸出, 喷射；黑而发亮的, 墨黑的"}]},
+{"root":"duc / duct","meaning":"引导","origin":"From Latin ducere 'to lead' (past stem duct-).","words":[{"w":"conduct","ph":"'kɔndʌkt, -dәkt","en":"direct the course of; manage or control; lead, as in the performance of a composition; Barenboim con","zh":"行为, 举动, 指导；为人, 指挥, 管理, 实施；领导, 传导, 指挥"},{"w":"product","ph":"'prɒdʌkt","en":"an artifact that has been created by someone or some process; a quantity obtained by multiplication","zh":"产品, 结果, 乘积；生产物"},{"w":"produce","ph":"prә'dju:s","en":"fresh fruits and vegetable grown for the market","zh":"生产品, 物产, 后代；产生, 生产, 提出, 出示；生产, 制造"},{"w":"producer","ph":"prә'dju:sә","en":"someone who finds financing for and supervises the making and presentation of a show (play or film o","zh":"生产者, 制作者, 制作人；发生器；(炉煤气)发生炉；制气炉；生产者"},{"w":"reduce","ph":"ri'dju:s","en":"cut down on; make a reduction in; make less complex","zh":"减少, 分解, 降低, 使衰退, 把...分解, 把...归纳；减少, 减肥, 缩小；缩小"},{"w":"reduction","ph":"ri'dʌkʃәn","en":"any process in which electrons are added to an atom or ion (as by removing oxygen or adding hydrogen","zh":"减少, 缩影, 变化；还原"},{"w":"introduce","ph":".intrә'dju:s","en":"cause to come to know personally; bring something new to an environment","zh":"介绍, 引入, 采用, 输入；引进, 输入, 介绍"},{"w":"introduction","ph":".intrә'dʌkʃәn","en":"the act of beginning something new; the first section of a communication","zh":"介绍, 传入, 采用, 初步"},{"w":"educate","ph":"'edjukeit","en":"give an education to; teach or refine to be discriminative in taste or judgment","zh":"教育, 培养, 训练"},{"w":"deduce","ph":"di'dju:s","en":"reason by deduction; establish by deduction; conclude by reasoning; in logic","zh":"推论, 演绎出；推断, 推出, 演绎"},{"w":"deduct","ph":"di'dʌkt","en":"make a subtraction; retain and refrain from disbursing; of payments","zh":"扣除, 减去；扣除, 减去, 折扣"},{"w":"deduction","ph":"di'dʌkʃәn","en":"an amount or percentage deducted; something that is inferred (deduced or entailed or implied)","zh":"减除, 扣除, 减除额, 推论；演绎, 推论"},{"w":"induce","ph":"in'dju:s","en":"cause to arise; cause to do; cause to act in a specified manner","zh":"引诱, 招致, 归纳出, 感应；诱导, 感应"},{"w":"inductive","ph":"in'dʌktiv","en":"arising from inductance; of reasoning; proceeding from particular facts to a general conclusion","zh":"归纳的, 感应的；感应瓦特计"},{"w":"seduce","ph":"si'dju:s","en":"induce to have sex; lure or entice away from duty, principles, or proper conduct","zh":"唆使, 怂恿, 引诱, 诱奸；勾引, 诱惑, 诱奸"},{"w":"abduct","ph":"æb'dʌkt","en":"pull away from the body","zh":"诱拐, 绑架, 使外展；外展, 展"},{"w":"duct","ph":"dʌkt","en":"a bodily passage or tube lined with epithelial cells and conveying a secretion or other substance; a","zh":"管, 输送管；通过管道输送"},{"w":"aqueduct","ph":"'ækwidʌkt","en":"a conduit that resembles a bridge but carries water over a valley","zh":"水管, 沟渠, 导管；水管"},{"w":"viaduct","ph":"'vaiәdʌkt","en":"bridge consisting of a series of arches supported by piers used to carry a road (or railroad) over a","zh":"高架桥"},{"w":"induct","ph":"in'dʌkt","en":"place ceremoniously or formally in an office or position; admit as a member","zh":"引导, 使入门, 引入, 使就职"},{"w":"subdue","ph":"sәb'dju:","en":"put down by force or intimidation; to put down by force or authority","zh":"使服从, 压制, 减弱, 抑制, 克制"},{"w":"duke","ph":"dju:k","en":"a British peer of the highest rank; a nobleman (in various countries) of high rank","zh":"公爵"},{"w":"conducive","ph":"kәn'dju:siv","en":"tending to bring about; being partly responsible for","zh":"有益于...的, 有助于...的, 助长的"},{"w":"deductive","ph":"di'dʌktiv","en":"relating to logical deduction; involving inferences from general principles","zh":"推论的, 演绎的；推定的, 推断的, 演绎的"},{"w":"misconduct","ph":".mis'kɒndʌkt","en":"bad or dishonest management by persons supposed to act on another's behalf","zh":"办错, 使行为不端；办错, 渎职, 通奸"},{"w":"conduit","ph":"'kɒndit","en":"a passage (a pipe or tunnel) through which water or electric wires can pass","zh":"导管, 水管, 沟渠；导管"}]}
+]"""
+
+
+def root_seed_load(conn):
+    """首次运行时把内嵌的词根种子数据灌进库。词形在生成时已逐一核验过。"""
+    if conn.execute("SELECT COUNT(*) FROM root_seed").fetchone()[0]:
+        return
+    try:
+        data = json.loads(ROOT_SEED_JSON)
+    except Exception:
+        data = []
+    for i, g in enumerate(data or []):
+        ws = g.get("words")
+        ws = ws if isinstance(ws, list) else []
+        conn.execute(
+            "INSERT OR REPLACE INTO root_seed (root, meaning, origin, words, seq)"
+            " VALUES (?,?,?,?,?)",
+            (normalize(g.get("root") or ""), g.get("meaning") or "",
+             g.get("origin") or "", json.dumps(ws, ensure_ascii=False), i))
+    conn.commit()
+
+
+def roots_plan_today(conn, cfg):
+    """今天要背的词根词族。当天锁定；没排过就从没排/最久没排的里面取，
+    背完一轮自动循环。凌晨 4 点换天，跟复习一致。"""
+    root_seed_load(conn)
+    day = today()
+    roots = [r[0] for r in conn.execute(
+        "SELECT root FROM root_plan WHERE day = ? ORDER BY rowid", (day,))]
+    if not roots:
+        n = max(1, int(cfg.get("roots_per_day") or 5))
+        roots = [r[0] for r in conn.execute(
+            "SELECT root FROM root_seed ORDER BY served, seq LIMIT ?", (n,))]
+        if roots:
+            conn.executemany("INSERT OR IGNORE INTO root_plan (day, root) VALUES (?,?)",
+                             [(day, r) for r in roots])
+            conn.execute("UPDATE root_seed SET served = served + 1 WHERE root IN (%s)"
+                         % ",".join("?" * len(roots)), roots)
+            conn.commit()
+    if not roots:
+        return {"day": day, "groups": []}
+    known = {x[0] for x in conn.execute("SELECT word FROM words")}
+    groups = []
+    for r in roots:
+        row = conn.execute(
+            "SELECT meaning, origin, words FROM root_seed WHERE root = ?", (r,)).fetchone()
+        if not row:
+            continue
+        ws = []
+        for it in json.loads(row["words"] or "[]"):
+            w = normalize(str(it.get("w") or ""))
+            if not w:
+                continue
+            ws.append({"word": w, "phon": it.get("ph") or "", "en": it.get("en") or "",
+                       "zh": it.get("zh") or "", "mine": w in known})
+        groups.append({"root": r, "meaning": row["meaning"] or "",
+                       "origin": row["origin"] or "", "words": ws})
+    return {"day": day, "groups": groups}
+
+
 def roots_view(conn, cfg, min_words=1):
     """按词根分组：每组挂你库里的同根词 + 词典里的关联词。"""
     groups = {}
@@ -2271,6 +2355,14 @@ def cmd_roots(args, cfg):
             total += n
             print(dim("  已分析 %d 个…" % total))
         print(green("  分析完成 %d 个词" % total))
+    plan = roots_plan_today(conn, cfg)
+    for g in plan["groups"]:
+        print("\n%s %s  %s" % (bold(g["root"]), dim(g["meaning"]),
+                               dim("(%d 个词族)" % len(g["words"]))))
+        print("  " + "、".join(
+            "%s(%s)" % (w["word"], w["zh"][:18]) for w in g["words"]))
+    if plan["groups"]:
+        print("\n" + dim("（词族里的词想收进词库：v add <word>）"))
     for g in roots_view(conn, cfg, args.min):
         print("\n%s %s  %s" % (bold(g["root"]), dim(g["meaning"]),
                                 dim("(%d 个)" % len(g["mine"]))))
@@ -3643,32 +3735,67 @@ async function loadRoots(){
   const el = $("#roots");
   const r = await api("/api/roots");
   const gs = r.groups || [];
-  if(!gs.length){
-    el.innerHTML = `<div class="empty">${r.pending && r.has_key
-      ? `Working out the roots of your words…`
-      : "No shared roots yet — collect a few more words."}</div>`;
-    if(r.pending && r.has_key) setTimeout(()=>{ if(tab==="roots") loadRoots(); }, 12000);
-    return;
-  }
-  el.innerHTML =
-    `<div class="count">${gs.length} roots across your words${
-      r.pending ? ` · ${r.pending} still filling in` : ""}</div>
-     ${gs.map(g => `
-       <div class="rt${openRoots.has(g.root) ? " open" : ""}" data-r="${esc(g.root)}">
+  const p = r.plan || {};
+  const pg = p.groups || [];
+
+  // 今日词族：一天 N 个词根，每个带一串同根词（英释义 · 中文）
+  let planHTML = "";
+  if(pg.length){
+    const total = pg.reduce((a,g)=>a+g.words.length, 0);
+    planHTML =
+      `<div class="nday">TODAY · ${pg.length} ROOTS · ${total} WORDS — one root, a whole family</div>
+       ${pg.map(g => {
+         openRoots.add(g.root);
+         return `
+       <div class="rt open" data-r="${esc(g.root)}">
          <div class="rthead" onclick="toggleRoot(this.parentNode)">
            <b>${esc(g.root)}</b><span class="rtm">${esc(g.meaning)}</span>
-           <span class="rtn">${g.mine.length}</span>
+           <span class="rtn">${g.words.length}</span>
          </div>
          <div class="rtbody">
            ${g.origin ? `<div class="rtorig">${esc(g.origin)}</div>` : ""}
-           <div class="rtlab">In your list</div>
-           <div class="chips">${g.mine.map(m =>
-             `<span class="chip mine tip" data-zh="${esc(m.breakdown)}">${esc(m.word)}</span>`
-           ).join("")}</div>
-           ${g.related.length ? `<div class="rtlab">Same root — double-click to add</div>
-           ${famHTML(g.related)}` : ""}
+           <div class="rtlab">Family — double-click a word to add</div>
+           <div class="fam">${g.words.map(x => `
+             <div class="famw${x.mine ? " mine" : ""}" data-w="${esc(x.word)}"
+                  ${x.mine ? "" : `ondblclick="addChip(this)"`}>
+               <b>${esc(x.word)}</b>
+               <span>${esc(x.en || "")}${x.zh ? " · " + esc(x.zh) : ""}</span>
+             </div>`).join("")}</div>
          </div>
-       </div>`).join("")}`;
+       </div>`; }).join("")}
+       <div class="nday">FROM YOUR WORDS</div>`;
+  }
+
+  if(!gs.length){
+    if(!pg.length){
+      el.innerHTML = `<div class="empty">${r.pending && r.has_key
+        ? `Working out the roots of your words…`
+        : "No shared roots yet — collect a few more words."}</div>`;
+      if(r.pending && r.has_key) setTimeout(()=>{ if(tab==="roots") loadRoots(); }, 12000);
+      return;
+    }
+    el.innerHTML = planHTML;
+  } else {
+    el.innerHTML =
+      `${planHTML}<div class="count">${gs.length} roots across your words${
+        r.pending ? ` · ${r.pending} still filling in` : ""}</div>
+      ${gs.map(g => `
+        <div class="rt${openRoots.has(g.root) ? " open" : ""}" data-r="${esc(g.root)}">
+          <div class="rthead" onclick="toggleRoot(this.parentNode)">
+            <b>${esc(g.root)}</b><span class="rtm">${esc(g.meaning)}</span>
+            <span class="rtn">${g.mine.length}</span>
+          </div>
+          <div class="rtbody">
+            ${g.origin ? `<div class="rtorig">${esc(g.origin)}</div>` : ""}
+            <div class="rtlab">In your list</div>
+            <div class="chips">${g.mine.map(m =>
+              `<span class="chip mine tip" data-zh="${esc(m.breakdown)}">${esc(m.word)}</span>`
+            ).join("")}</div>
+            ${g.related.length ? `<div class="rtlab">Same root — double-click to add</div>
+            ${famHTML(g.related)}` : ""}
+          </div>
+        </div>`).join("")}`;
+  }
   if(r.pending && r.has_key) setTimeout(()=>{ if(tab==="roots") loadRoots(); }, 20000);
 }
 
@@ -3712,7 +3839,7 @@ window.markTaken = w => {
       node.replaceWith(...holder.childNodes);
     });
   });
-  document.querySelectorAll("#scenes .famw").forEach(el => {
+  document.querySelectorAll("#scenes .famw, #roots .famw").forEach(el => {
     if((el.dataset.w || "").toLowerCase() === low){
       el.classList.add("mine");
       el.ondblclick = null;
@@ -4203,6 +4330,7 @@ def make_handler(cfg, token):
                     pend += sum(1 for g in gs if not g["related"])
                     return self._send(200, json.dumps(
                         {"groups": gs, "pending": pend,
+                         "plan": roots_plan_today(conn, cfg),
                          "has_key": bool(cfg.get("api_key"))}, ensure_ascii=False))
                 if u.path == "/api/pick":
                     return self._send(200, json.dumps(
