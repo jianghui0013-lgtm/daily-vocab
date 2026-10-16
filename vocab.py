@@ -239,6 +239,7 @@ CREATE TABLE IF NOT EXISTS examples (
   word_id    INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
   en         TEXT NOT NULL,
   zh         TEXT,
+  style      TEXT DEFAULT 'english',   -- mixed=中英混杂（中文句里嵌英文词）, english=纯英文
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_examples_word ON examples(word_id);
@@ -366,6 +367,10 @@ def db():
         if ncols and c not in ncols:
             conn.execute("ALTER TABLE news ADD COLUMN %s TEXT" % c)
             conn.commit()
+    ecols = [r[1] for r in conn.execute("PRAGMA table_info(examples)")]
+    if ecols and "style" not in ecols:
+        conn.execute("ALTER TABLE examples ADD COLUMN style TEXT DEFAULT 'english'")
+        conn.commit()
     return conn
 
 
@@ -1587,16 +1592,16 @@ def cmd_watch(args, cfg):
             cfg = load_cfg()   # 你在网页 ⚙ 里改了密钥/模型，这里要能立刻读到
         if cfg.get("api_key") and tick % 10 == 0:
             try:
-                todo = words_without_examples(conn, 1)
+                todo = example_target(conn)
                 if todo:
-                    n = gen_examples(conn, todo[0], cfg)
+                    n = gen_examples(conn, todo, cfg)
                     if n:
-                        print("  %s %s %s" % (green("例句"), todo[0]["word"],
+                        print("  %s %s %s" % (green("例句"), todo["word"],
                                               dim("%d 句" % n)))
                     else:
                         conn.execute(
-                            "INSERT INTO examples (word_id, en, zh, created_at)"
-                            " VALUES (?,'','',?)", (todo[0]["id"], now_iso()))
+                            "INSERT INTO examples (word_id, en, zh, style, created_at)"
+                            " VALUES (?,'','','mixed',?)", (todo["id"], now_iso()))
                         conn.commit()
             except Exception as e:
                 print(dim("  例句生成出错: %s" % e))
@@ -1697,13 +1702,16 @@ AI_EX_SYSTEM = (
 AI_EX_USER = """单词：{word}
 释义：{definition}
 
-给这个词造 3 个短例句，帮助理解它怎么用。要求：
-- 每句不超过 12 个单词，用日常场景，别用生僻词
-- 3 句尽量覆盖这个词的不同常见用法或搭配
-- 每句配一句自然的中文翻译
+造 3 个「中英混杂」的例句，帮我一眼看懂这个词怎么用。要求：
+- 句子主体用**日常中文**，只把目标词 {word} **保留英文原形**嵌进中文句子里，
+  像中文口语里夹英文词那样自然（例：我把用户名改成了 myxgj，那个网站提示密码太简单了。）
+- 一句话讲一个具体生活场景，别抽象；不超过 35 个汉字
+- 3 句覆盖这个词的不同常见用法或搭配
+- 目标词在句子里**只能出现一次**，且必须是它的英文原形
+- 每句后面配一个极短的注释：**词性 + 最贴切这一句的中文义**（例：n. 用户名 / v. 检查 / adj. 显眼的）
 
 返回：
-{{"examples": [{{"en": "英文句子", "zh": "中文翻译"}}]}}"""
+{{"examples": [{{"mix": "中文句子，其中 {word} 保持英文", "note": "n. 中文义"}}]}}"""
 
 
 def gen_examples(conn, w, cfg, quiet=True):
@@ -1739,19 +1747,28 @@ def gen_examples(conn, w, cfg, quiet=True):
         return 0
     n = 0
     for it in items[:3]:
-        en = (it.get("en") or "").strip()
-        if not en:
+        mix = (it.get("mix") or it.get("en") or "").strip()
+        if not mix:
             continue
         conn.execute(
-            "INSERT INTO examples (word_id, en, zh, created_at) VALUES (?,?,?,?)",
-            (w["id"], en, (it.get("zh") or "").strip(), now_iso()))
+            "INSERT INTO examples (word_id, en, zh, style, created_at)"
+            " VALUES (?,?,?,?,?)",
+            (w["id"], mix, (it.get("note") or it.get("zh") or "").strip(),
+             "mixed", now_iso()))
         n += 1
     if n:
         conn.commit()
     return n
 
 
-def words_without_examples(conn, limit=500):
+def words_without_examples(conn, limit=500, style=None):
+    """style=None：一个例句都还没有的词；style='mixed'：还没有混杂例句的词。"""
+    if style:
+        return conn.execute(
+            "SELECT w.* FROM words w WHERE NOT EXISTS ("
+            " SELECT 1 FROM examples e WHERE e.word_id = w.id"
+            " AND COALESCE(e.style,'english') = ?)"
+            " ORDER BY w.updated_at DESC LIMIT ?", (style, limit)).fetchall()
     return conn.execute(
         "SELECT w.* FROM words w LEFT JOIN examples e ON e.word_id = w.id"
         " WHERE e.id IS NULL GROUP BY w.id ORDER BY w.updated_at DESC LIMIT ?",
@@ -1759,9 +1776,33 @@ def words_without_examples(conn, limit=500):
 
 
 def examples_of(conn, word_id, limit=3):
+    """优先给中英混杂例句；没有才退回纯英文例句。"""
+    rows = [dict(r) for r in conn.execute(
+        "SELECT en, zh, COALESCE(style,'english') AS style FROM examples"
+        " WHERE word_id = ? AND en != '' AND COALESCE(style,'english') = 'mixed'"
+        " ORDER BY id LIMIT ?", (word_id, limit))]
+    if rows:
+        return rows
     return [dict(r) for r in conn.execute(
-        "SELECT en, zh FROM examples WHERE word_id = ? AND en != '' ORDER BY id LIMIT ?",
+        "SELECT en, zh, COALESCE(style,'english') AS style FROM examples"
+        " WHERE word_id = ? AND en != '' ORDER BY id LIMIT ?",
         (word_id, limit))]
+
+
+def example_target(conn):
+    """排队补例句的词：先补一个例句都没有的，再补还没混杂例句的。返回一行或 None。"""
+    rows = words_without_examples(conn, 1)
+    if not rows:
+        rows = words_without_examples(conn, 1, style="mixed")
+    return rows[0] if rows else None
+
+
+def mixed_missing(conn):
+    """还没有中英混杂例句的词数。"""
+    return conn.execute(
+        "SELECT COUNT(*) FROM words w WHERE NOT EXISTS ("
+        " SELECT 1 FROM examples e WHERE e.word_id = w.id"
+        " AND COALESCE(e.style,'english') = 'mixed')").fetchone()[0]
 
 
 def cmd_examples(args, cfg):
@@ -1770,11 +1811,11 @@ def cmd_examples(args, cfg):
         print(red("生成例句需要 AI。"))
         print(dim("  打开生词本网页 → 设置 → 填上密钥，或者跑 v key"))
         return 1
-    rows = words_without_examples(conn, args.limit)
+    rows = words_without_examples(conn, args.limit, style="mixed")
     if not rows:
-        print(green("每个词都有例句了。"))
+        print(green("每个词都有中英混杂例句了。"))
         return 0
-    print(dim("给 %d 个词生成例句…" % len(rows)))
+    print(dim("给 %d 个词生成中英混杂例句…" % len(rows)))
     ok = 0
     for w in rows:
         n = gen_examples(conn, w, cfg, quiet=False)
@@ -1783,6 +1824,10 @@ def cmd_examples(args, cfg):
             ex = examples_of(conn, w["id"], 1)
             print("  %s %-14s %s" % (green("✓"), w["word"], dim(ex[0]["en"] if ex else "")))
         else:
+            conn.execute(
+                "INSERT INTO examples (word_id, en, zh, style, created_at)"
+                " VALUES (?,'','','mixed',?)", (w["id"], now_iso()))
+            conn.commit()
             print("  %s %s" % (red("×"), w["word"]))
     print(dim("\n完成 %d/%d" % (ok, len(rows))))
     return 0
@@ -3028,6 +3073,8 @@ input[type=text]{width:100%;padding:12px 14px;border-radius:11px;border:1px soli
 u.kw{text-decoration:underline;text-decoration-color:var(--accent);
   text-decoration-thickness:1.5px;text-underline-offset:3px}
 .exi .zh{font-size:13px;color:var(--dim);margin-top:1px}
+.exi.mixed .en{white-space:normal;overflow:visible;text-overflow:clip}
+.exi.mixed .note{color:var(--accent);font-size:12.5px;white-space:nowrap;opacity:.85}
 .row .w.tip::after,.card .word.tip::after{font-weight:400}
 .den{font-size:13.5px;color:var(--dim);margin-top:4px;line-height:1.5;
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
@@ -3330,7 +3377,7 @@ function rowHTML(w, st){
       ${w.definition?`<div class="d zh">${esc(w.definition)}</div>`:""}
     </div>
     <div class="cr">
-      ${exHTML(w.examples)}
+      ${exHTML(w.examples, w.word)}
       ${(!w.examples||!w.examples.length)?(st.has_key
           ? `<div class="wait">writing examples\u2026</div>`
           : (w.sentence?`<div class="s">${esc(w.sentence)}</div>`:"")):""}
@@ -3489,16 +3536,21 @@ function kwStems(w){
   }
   return o;
 }
-function markKnown(text){
-  if(!knownSet || !knownSet.size) return esc(text);
+function markKnown(text, target){
+  const t = target ? String(target).toLowerCase() : "";
+  if((!knownSet || !knownSet.size) && !t) return esc(text);
   return esc(text).replace(/[A-Za-z][A-Za-z'-]*/g, m => {
     const low = m.toLowerCase();
-    return kwStems(low).some(x => knownSet.has(x)) ? `<u class="kw">${m}</u>` : m;
+    if(t && low === t) return `<u class="kw">${m}</u>`;      // 目标词必定高亮
+    return (knownSet && knownSet.size && kwStems(low).some(x => knownSet.has(x)))
+      ? `<u class="kw">${m}</u>` : m;
   });
 }
 
-window.exHTML=list=>!list||!list.length?"":`<div class="ex">`+list.map(e=>
-  `<div class="exi${e.zh?" tip":""}"${e.zh?` data-zh="${esc(e.zh)}"`:""}><div class="en">${markKnown(e.en)}</div>${e.zh?`<div class="zh">${esc(e.zh)}</div>`:""}</div>`
+window.exHTML=(list,target)=>!list||!list.length?"":`<div class="ex">`+list.map(e=>
+  (e.style==="mixed")
+    ? `<div class="exi mixed"><div class="en">${markKnown(e.en,target)}${e.zh?` <span class="note">${esc(e.zh)}</span>`:""}</div></div>`
+    : `<div class="exi${e.zh?" tip":""}"${e.zh?` data-zh="${esc(e.zh)}"`:""}><div class="en">${markKnown(e.en)}</div>${e.zh?`<div class="zh">${esc(e.zh)}</div>`:""}</div>`
 ).join("")+`</div>`;
 
 // ---------- 设置
@@ -3507,8 +3559,8 @@ async function loadSet(){
   el.innerHTML=`
     <div class="row">
       <div class="w">Example sentences</div>
-      <div class="d">Three short examples per word, generated by AI. ${st.has_key?"":"Add a key below first."}</div>
-      ${st.has_key?`<div class="act"><button class="yes" id="gen">${st.missing?`Generate for ${st.missing} word${st.missing>1?"s":""}`:"All words covered"}</button></div>
+      <div class="d">Three 中英混杂 examples per word (中文句里嵌英文词 + 词性·词义), generated by AI. ${st.has_key?"":"Add a key below first."}</div>
+      ${st.has_key?`<div class="act"><button class="yes" id="gen">${st.missing?`Upgrade ${st.missing} word${st.missing>1?"s":""} to 中英混杂`:"All words covered"}</button></div>
       <div class="s" id="genlog"></div>`:""}
     </div>
     <div class="row">
@@ -4362,7 +4414,7 @@ def make_handler(cfg, token):
                         "key_hint": (k[:6] + "…" + k[-4:]) if len(k) > 12 else "",
                         "model": cfg.get("model"), "level": cfg.get("level"),
                         "dict_count": dn,
-                        "missing": len(words_without_examples(conn)),
+                        "missing": mixed_missing(conn),
                     }, ensure_ascii=False))
                 return self._send(404, json.dumps({"error": "not found"}))
             finally:
@@ -4577,20 +4629,20 @@ def make_handler(cfg, token):
                     if not cfg.get("api_key"):
                         return self._send(200, json.dumps(
                             {"ok": False, "error": "No API key set"}, ensure_ascii=False))
-                    rows = words_without_examples(conn, 1)
-                    if not rows:
-                        return self._send(200, json.dumps({"ok": True, "done": True, "left": 0}))
-                    w = rows[0]
+                    w = example_target(conn)
+                    if not w:
+                        return self._send(200, json.dumps(
+                            {"ok": True, "done": True, "left": 0, "mixed_left": 0}))
                     n = gen_examples(conn, w, cfg)
-                    left = len(words_without_examples(conn))
                     if not n:
                         conn.execute(
-                            "INSERT INTO examples (word_id, en, zh, created_at) VALUES (?,?,?,?)",
-                            (w["id"], "", "", now_iso()))
+                            "INSERT INTO examples (word_id, en, zh, style, created_at)"
+                            " VALUES (?,'','','mixed',?)", (w["id"], now_iso()))
                         conn.commit()
-                        left = len(words_without_examples(conn))
+                    left = mixed_missing(conn)
                     return self._send(200, json.dumps(
-                        {"ok": True, "word": w["word"], "made": n, "left": left},
+                        {"ok": True, "word": w["word"], "made": n,
+                         "left": left, "mixed_left": left},
                         ensure_ascii=False))
                 return self._send(404, json.dumps({"error": "not found"}))
             finally:
