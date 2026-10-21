@@ -353,24 +353,23 @@ def db():
             CREATE INDEX IF NOT EXISTS idx_word_root ON word_root(root);
         """)
         conn.commit()
-    scols = [r[1] for r in conn.execute("PRAGMA table_info(scene)")]
-    if scols and "source" not in scols:
-        conn.execute("ALTER TABLE scene ADD COLUMN source TEXT")
-        conn.commit()
-    fcols = [r[1] for r in conn.execute("PRAGMA table_info(root_family)")]
+    # 加列迁移。web 和 jobs 两个进程可能同时启动，撞车时忽略 duplicate column。
+    def _add_col(table, col, decl="TEXT"):
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(%s)" % table)]
+        if not cols or col in cols:
+            return
+        try:
+            conn.execute("ALTER TABLE %s ADD COLUMN %s %s" % (table, col, decl))
+            conn.commit()
+        except sqlite3.OperationalError as e:
+            if "duplicate column" not in str(e):
+                raise
+    _add_col("scene", "source")
     for c in ("origin", "story", "items"):
-        if fcols and c not in fcols:
-            conn.execute("ALTER TABLE root_family ADD COLUMN %s TEXT" % c)
-            conn.commit()
-    ncols = [r[1] for r in conn.execute("PRAGMA table_info(news)")]
+        _add_col("root_family", c)
     for c in ("ai_en", "ai_zh"):
-        if ncols and c not in ncols:
-            conn.execute("ALTER TABLE news ADD COLUMN %s TEXT" % c)
-            conn.commit()
-    ecols = [r[1] for r in conn.execute("PRAGMA table_info(examples)")]
-    if ecols and "style" not in ecols:
-        conn.execute("ALTER TABLE examples ADD COLUMN style TEXT DEFAULT 'english'")
-        conn.commit()
+        _add_col("news", c)
+    _add_col("examples", "style", "TEXT DEFAULT 'english'")
     return conn
 
 
